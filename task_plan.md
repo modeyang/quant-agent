@@ -4,7 +4,7 @@
 把已落地的 `P0` 骨架推进成可运行的 `plan_only` 真实链路：使用 `adata` 拉取数据，生成结构化计划，写入 SQLite，并由 orchestrator 返回真实结果。
 
 ## Current Phase
-Phase 2
+Phase 4
 
 ## Phases
 
@@ -16,34 +16,46 @@ Phase 2
 
 ### Phase 2: Planning & Structure
 - [x] 定义 `plan_only` 真实链路的模块边界
-- [ ] 写出 focused implementation plan
-- [ ] 更新 findings 和 progress
-- **Status:** in_progress
+- [x] 写出 focused implementation plan
+- [x] 更新 findings 和 progress
+- **Status:** complete
 
 ### Phase 3: Implementation
-- [ ] 创建 worktree
-- [ ] 实现 adata-backed planning flow
-- [ ] 验证、分步提交并同步 GitHub
-- **Status:** pending
+- [x] 通过 `feat/quant-agent-plan-only` 分支完成实现并合并回源仓库 `main`
+- [x] 实现 `adata -> generate_plan -> SQLite -> orchestrator` 真实链路
+- [x] 同步 README / SKILL 文档，并补上 `adata` 缺失时的保护
+- **Status:** complete
+
+### Phase 4: Progress Sync & Next Handoff
+- [x] 从源目录 `/Users/yanggenxing/.openclaw/workspace-techAlpha/projects/quant-agent` 回收历史进度
+- [x] 核对当前仓库与源目录源码状态基本一致
+- [ ] 基于真实历史规划下一阶段（`run_log` / execution / monitoring / memory）
+- **Status:** in_progress
 
 ## Key Questions
-1. `plan_only` 应该直接接真实 `adata`，还是先做 provider injection？
-2. SQLite 落库应该只持久化 `candidate_plan`，还是顺便加 `run_log`？
-3. orchestrator 返回值是否需要兼顾人读摘要和结构化字段？
+1. 下一步优先补 `run_log`，还是先把 execution 接到 orchestrator 主链？
+2. `xtdata / xtquant` 应该在 `P0` 结束前接入，还是作为 `P1` 的第一优先级？
+3. `monitoring` / `memory` 是否需要在 `P0` 结束前至少保留最小可运行占位？
 
 ## Decisions Made
 | Decision | Rationale |
 |----------|-----------|
 | 本轮只做 `plan_only` 真实集成 | 降低范围，优先把研究模式跑通 |
 | 研究模式使用 `adata` 作为唯一真实数据源 | 当前最容易本地验证，且不需要 Windows / MiniQMT |
+| orchestrator / runtime 采用 provider injection | 便于 fake provider 测试和后续切换 `xtdata` |
+| 本轮 SQLite 只持久化 `candidate_plan` | 先打通最短真实价值闭环，`run_log` 延后到下一阶段 |
+| orchestrator 返回结构化 planning / execution / review 三段结果 | 便于 skill 编排和测试断言 |
 | `xtquant` 保持 mockable，不进入本轮 orchestrator | 避免把研究链路和实盘执行耦合在一起 |
+| 当前独立仓库视为源目录项目的剥离快照 | 源目录 git 历史可作为真实进度依据 |
 
 ## Errors Encountered
 | Error | Attempt | Resolution |
 |-------|---------|------------|
 | `python` 命令不存在 | 1 | 改用 `python3` |
 | 主仓库并行 git 命令导致 `index.lock` | 1 | 后续 git 操作改为串行 |
+| 当前独立仓库缺少历史上下文 | 1 | 回查源目录与提交历史恢复进度 |
 
 ## Notes
-- 本轮计划文档保存到 `docs/superpowers/plans/`
-- 计划写完后进入新 worktree 实现
+- `plan_only` focused plan 位于 `docs/superpowers/plans/2026-03-27-p0-plan-only-real-integration.md`
+- 源目录中的关键提交：`ee1f02db`、`bf6cc981`、`15c6faed`、`8d2734ba`、`168b0a2e`
+- 源目录中的 `feat/quant-agent-plan-only` 已合并到 `main`
