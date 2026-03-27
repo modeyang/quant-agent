@@ -1,0 +1,10 @@
+# MiniQMT account sample configuration.
+account:
+  broker: miniqmt
+  account_id: "your-account-id"
+  market: cn-a
+
+connection:
+  qmt_path: "C:/MiniQMT/userdata_mini"
+  session_id: 100001
+

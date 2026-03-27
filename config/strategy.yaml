@@ -1,0 +1,16 @@
+planning:
+  pool_limits:
+    main_pool_max_positions: 5
+    bond_pool_max_positions: 3
+  thresholds:
+    candidate_min_score: 70
+    watch_min_score: 60
+
+execution:
+  entry:
+    first_entry_ratio: 0.3333
+    max_single_position_pct: 0.25
+  add_position:
+    require_profit: true
+    allow_average_down: false
+

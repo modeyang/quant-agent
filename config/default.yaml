@@ -1,0 +1,59 @@
+# Quant Agent 默认配置
+
+# === Agent 模式 ===
+agent:
+  mode: manual  # manual | semi_auto | full_auto
+  confirmation_threshold: 0.8  # 信号置信度低于此值需要确认
+
+# === 风控规则 ===
+risk:
+  max_position_pct: 0.20      # 单股最大仓位 20%
+  max_daily_loss_pct: 0.03    # 日内最大亏损 3%
+  max_drawdown_pct: 0.10      # 最大回撤 10%
+  max_total_position_pct: 0.80  # 总仓位上限 80%
+
+# === 数据源 ===
+data:
+  akshare:
+    enabled: true
+    cache_ttl: 300  # 缓存5分钟
+  
+  adata:
+    enabled: true
+    cache_ttl: 60   # 缓存1分钟
+
+# === MiniQMT 配置 ===
+qmt:
+  enabled: true
+  reconnect_interval: 30  # 重连间隔秒数
+  order_timeout: 30      # 订单超时秒数
+  max_retry: 3           # 最大重试次数
+
+# === 策略配置 ===
+strategies:
+  trend_following:
+    enabled: true
+    lookback_period: 20
+    entry_threshold: 0.02
+    exit_threshold: -0.01
+    stop_loss: -0.03
+  
+  mean_reversion:
+    enabled: true
+    lookback_period: 30
+    entry_threshold: 2.0  # 标准差倍数
+    exit_threshold: 0.0
+    stop_loss: -0.05
+  
+  breakout:
+    enabled: false
+    lookback_period: 20
+    entry_threshold: 0.01
+    stop_loss: -0.02
+
+# === 日志配置 ===
+logging:
+  level: INFO
+  rotation: "00:00"  # 每天零点轮转
+  retention: 30      # 保留30天
+  trade_log: true    # 记录交易日志
