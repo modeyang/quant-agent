@@ -1,6 +1,12 @@
 from src.common.models import CandidatePlan
 from src.data.db import connect_db
-from src.data.repositories import PlanRepository
+from src.data.repositories import (
+    AccountSnapshotRepository,
+    FillRepository,
+    OrderRepository,
+    PlanRepository,
+    RunLogRepository,
+)
 from src.data.schema import init_schema
 
 
@@ -44,3 +50,82 @@ def test_plan_repository_saves_bulk_plans(tmp_path):
     saved = repo.list_by_run("run-1")
 
     assert len(saved) == 2
+
+
+def test_run_log_repository_start_and_finish_run(tmp_path):
+    conn = connect_db(tmp_path / "quant.db")
+    init_schema(conn)
+    repo = RunLogRepository(conn)
+
+    repo.start_run("run-1", mode="plan_only", message="started")
+    repo.finish_run("run-1", status="success", message="completed")
+    saved = repo.get_by_run("run-1")
+
+    assert saved is not None
+    assert saved["status"] == "success"
+    assert saved["mode"] == "plan_only"
+    assert saved["finished_at"] is not None
+
+
+def test_order_repository_upserts_and_updates_status(tmp_path):
+    conn = connect_db(tmp_path / "quant.db")
+    init_schema(conn)
+    repo = OrderRepository(conn)
+
+    repo.save_order(
+        run_id="run-1",
+        order_id="order-1",
+        symbol="600000.SH",
+        side="buy",
+        quantity=100,
+        price=10.5,
+        status="submitted",
+    )
+    repo.update_status(order_id="order-1", status="filled")
+    saved = repo.list_by_run("run-1")
+
+    assert len(saved) == 1
+    assert saved[0]["order_id"] == "order-1"
+    assert saved[0]["status"] == "filled"
+
+
+def test_fill_repository_round_trip(tmp_path):
+    conn = connect_db(tmp_path / "quant.db")
+    init_schema(conn)
+    repo = FillRepository(conn)
+
+    repo.save_fill(
+        run_id="run-1",
+        fill_id="fill-1",
+        order_id="order-1",
+        symbol="600000.SH",
+        quantity=100,
+        price=10.45,
+        filled_at="2026-03-27 14:50:00",
+    )
+    by_run = repo.list_by_run("run-1")
+    by_order = repo.list_by_order("order-1")
+
+    assert len(by_run) == 1
+    assert by_run[0]["fill_id"] == "fill-1"
+    assert len(by_order) == 1
+    assert by_order[0]["price"] == 10.45
+
+
+def test_account_snapshot_repository_round_trip(tmp_path):
+    conn = connect_db(tmp_path / "quant.db")
+    init_schema(conn)
+    repo = AccountSnapshotRepository(conn)
+
+    repo.save_snapshot(
+        run_id="run-1",
+        cash=100000.0,
+        total_asset=150000.0,
+        position_value=50000.0,
+        snapshot_at="2026-03-27 15:00:00",
+    )
+    saved = repo.list_by_run("run-1")
+
+    assert len(saved) == 1
+    assert saved[0]["cash"] == 100000.0
+    assert saved[0]["total_asset"] == 150000.0

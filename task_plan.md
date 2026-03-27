@@ -4,7 +4,7 @@
 把已落地的 `P0` 骨架推进成可运行的 `plan_only` 真实链路：使用 `adata` 拉取数据，生成结构化计划，写入 SQLite，并由 orchestrator 返回真实结果。
 
 ## Current Phase
-Phase 4
+Phase 6
 
 ## Phases
 
@@ -29,13 +29,25 @@ Phase 4
 ### Phase 4: Progress Sync & Next Handoff
 - [x] 从源目录 `/Users/yanggenxing/.openclaw/workspace-techAlpha/projects/quant-agent` 回收历史进度
 - [x] 核对当前仓库与源目录源码状态基本一致
-- [ ] 基于真实历史规划下一阶段（`run_log` / execution / monitoring / memory）
+- [x] 基于真实历史规划下一阶段（`run_log` / execution / monitoring / memory）
+- **Status:** complete
+
+### Phase 5: Data Layer Extension (Run Logs & Execution Persistence)
+- [x] 扩展 SQLite schema：`run_log`、`orders`、`fills`、`account_snapshot`
+- [x] 新增 repository 并注入 runtime（为 execution 主链打基础）
+- [x] 补齐数据层测试并通过全量回归
+- **Status:** complete
+
+### Phase 6: Execution Wiring Next
+- [ ] 在 orchestrator 中接入审批 -> 下单 -> 对账的最小 execution 主链
+- [ ] 将 `run_log` 状态流转接入 orchestrator 生命周期
+- [ ] 先使用 fake broker 跑通端到端测试，再决定 `xtquant` 接入时机
 - **Status:** in_progress
 
 ## Key Questions
-1. 下一步优先补 `run_log`，还是先把 execution 接到 orchestrator 主链？
-2. `xtdata / xtquant` 应该在 `P0` 结束前接入，还是作为 `P1` 的第一优先级？
-3. `monitoring` / `memory` 是否需要在 `P0` 结束前至少保留最小可运行占位？
+1. execution 主链在 P0 内是否只接 fake broker，`xtquant` 放到 P1？
+2. `run_log` 状态是否按 `running -> success/failed` 先固定，再补细粒度阶段状态？
+3. `monitoring` / `memory` 是否先做最小占位并给出清晰接口，再逐步实装？
 
 ## Decisions Made
 | Decision | Rationale |
@@ -47,6 +59,7 @@ Phase 4
 | orchestrator 返回结构化 planning / execution / review 三段结果 | 便于 skill 编排和测试断言 |
 | `xtquant` 保持 mockable，不进入本轮 orchestrator | 避免把研究链路和实盘执行耦合在一起 |
 | 当前独立仓库视为源目录项目的剥离快照 | 源目录 git 历史可作为真实进度依据 |
+| 下一阶段优先补数据层持久化基础（`run_log` + execution 相关表） | 能先把执行链数据闭环打底，再接 orchestration |
 
 ## Errors Encountered
 | Error | Attempt | Resolution |
@@ -59,3 +72,4 @@ Phase 4
 - `plan_only` focused plan 位于 `docs/superpowers/plans/2026-03-27-p0-plan-only-real-integration.md`
 - 源目录中的关键提交：`ee1f02db`、`bf6cc981`、`15c6faed`、`8d2734ba`、`168b0a2e`
 - 源目录中的 `feat/quant-agent-plan-only` 已合并到 `main`
+- 本轮新增持久化表和 repository 后，下一步进入 execution wiring

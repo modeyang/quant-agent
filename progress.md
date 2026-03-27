@@ -123,3 +123,28 @@
 | What's the goal? | Finish `P0` from a working `plan_only` slice to a fuller deterministic trading loop |
 | What have I learned? | 当前独立仓库的代码已对齐源目录实现，落后的是历史文档而不是功能代码 |
 | What have I done? | Recovered source history, confirmed merged `plan_only` slice, and synchronized progress docs |
+
+## Session: 2026-03-27 (Data Layer Extension)
+
+### Phase 5: Data Layer Extension (Run Logs & Execution Persistence)
+- **Status:** complete
+- Actions taken:
+  - 在 schema 中新增 `run_log`、`orders`、`fills`、`account_snapshot` 四张表
+  - 在 `src/data/repositories.py` 新增 `RunLogRepository`、`OrderRepository`、`FillRepository`、`AccountSnapshotRepository`
+  - 在 `src/data/runtime.py` 中注入新 repository，统一由 runtime 对外提供
+  - 扩展数据层测试，覆盖新表建表与新 repository 读写回路
+- Files created/modified:
+  - `src/data/schema.py` (updated)
+  - `src/data/repositories.py` (updated)
+  - `src/data/runtime.py` (updated)
+  - `tests/data/test_schema.py` (updated)
+  - `tests/data/test_repositories.py` (updated)
+  - `tests/data/test_runtime.py` (updated)
+  - `task_plan.md` (updated)
+  - `progress.md` (updated)
+
+## Test Results (Data Layer Extension)
+| Test | Input | Expected | Actual | Status |
+|------|-------|----------|--------|--------|
+| Data-layer targeted tests | `./venv/bin/python -m pytest tests/data/test_schema.py tests/data/test_repositories.py tests/data/test_runtime.py -q` | New tables and repositories pass behavior checks | `10 passed` | ✓ |
+| Full regression | `./venv/bin/python -m pytest tests -q` | No regression from data-layer changes | `30 passed` | ✓ |
