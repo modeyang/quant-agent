@@ -58,3 +58,22 @@ def fake_provider():
             return [Asset(symbol="600000.SH", asset_type="stock", exchange="SH", name="浦发银行")]
 
     return FakeProvider()
+
+
+@pytest.fixture
+def fake_broker():
+    class FakeBroker:
+        def __init__(self) -> None:
+            self.placed_orders: list[dict[str, object]] = []
+
+        def place_order(self, intent):
+            self.placed_orders.append(dict(intent))
+            return {"result": "ok", "order_count": len(self.placed_orders)}
+
+        def cancel_order(self, order_id):
+            return {"result": "ok", "order_id": order_id}
+
+        def query_orders(self):
+            return [dict(item) for item in self.placed_orders]
+
+    return FakeBroker()

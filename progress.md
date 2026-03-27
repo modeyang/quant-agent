@@ -148,3 +148,26 @@
 |------|-------|----------|--------|--------|
 | Data-layer targeted tests | `./venv/bin/python -m pytest tests/data/test_schema.py tests/data/test_repositories.py tests/data/test_runtime.py -q` | New tables and repositories pass behavior checks | `10 passed` | ✓ |
 | Full regression | `./venv/bin/python -m pytest tests -q` | No regression from data-layer changes | `30 passed` | ✓ |
+
+## Session: 2026-03-27 (Execution Wiring)
+
+### Phase 6: Execution Wiring Next
+- **Status:** complete
+- Actions taken:
+  - 在 `run_p0_cycle` 中接入 `run_log` 生命周期管理（`running -> success/failed`）
+  - 增加最小 execution 主链：人工审批门控、状态机流转、orders/fills/snapshot 落库、reconcile 汇总
+  - 增加 `review` 与 `postmortem` 的 execution 结果输出
+  - 为 execution 模式补充 fake broker 夹具与端到端测试
+- Files created/modified:
+  - `src/agent/orchestrator.py` (updated)
+  - `tests/conftest.py` (updated)
+  - `tests/agent/test_execution_orchestrator.py` (created)
+  - `tests/agent/test_plan_only_orchestrator.py` (updated)
+  - `task_plan.md` (updated)
+  - `progress.md` (updated)
+
+## Test Results (Execution Wiring)
+| Test | Input | Expected | Actual | Status |
+|------|-------|----------|--------|--------|
+| Agent execution tests | `./venv/bin/python -m pytest tests/agent/test_execution_orchestrator.py tests/agent/test_plan_only_orchestrator.py tests/agent/test_orchestrator.py -q` | Execution wiring and plan_only behavior both pass | `6 passed` | ✓ |
+| Full regression | `./venv/bin/python -m pytest tests -q` | No regression after execution wiring | `33 passed` | ✓ |

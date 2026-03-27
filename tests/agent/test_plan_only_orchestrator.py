@@ -17,6 +17,7 @@ def test_run_p0_cycle_plan_only_persists_ranked_plans(tmp_path, fake_provider):
     assert result["planning"]["status"] == "ready"
     assert result["planning"]["plan_count"] == 1
     assert result["planning"]["plans"][0]["symbol"] == "600000.SH"
+    assert result["run"]["status"] == "success"
 
     saved = runtime.plan_repo.list_by_run(result["planning"]["run_id"])
     assert len(saved) == 1

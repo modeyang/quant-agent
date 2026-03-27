@@ -4,7 +4,7 @@
 把已落地的 `P0` 骨架推进成可运行的 `plan_only` 真实链路：使用 `adata` 拉取数据，生成结构化计划，写入 SQLite，并由 orchestrator 返回真实结果。
 
 ## Current Phase
-Phase 6
+Phase 7
 
 ## Phases
 
@@ -39,15 +39,21 @@ Phase 6
 - **Status:** complete
 
 ### Phase 6: Execution Wiring Next
-- [ ] 在 orchestrator 中接入审批 -> 下单 -> 对账的最小 execution 主链
-- [ ] 将 `run_log` 状态流转接入 orchestrator 生命周期
-- [ ] 先使用 fake broker 跑通端到端测试，再决定 `xtquant` 接入时机
+- [x] 在 orchestrator 中接入审批 -> 下单 -> 对账的最小 execution 主链
+- [x] 将 `run_log` 状态流转接入 orchestrator 生命周期
+- [x] 先使用 fake broker 跑通端到端测试，再决定 `xtquant` 接入时机
+- **Status:** complete
+
+### Phase 7: Monitoring & Memory Minimal Slice
+- [ ] 增加 `monitoring` 最小可运行模块（计划失效/强化检查占位）
+- [ ] 增加 `memory` 最小可运行模块（结构化写入占位）
+- [ ] 在 orchestrator 中打通 review -> memory 的最小落库链路
 - **Status:** in_progress
 
 ## Key Questions
-1. execution 主链在 P0 内是否只接 fake broker，`xtquant` 放到 P1？
-2. `run_log` 状态是否按 `running -> success/failed` 先固定，再补细粒度阶段状态？
-3. `monitoring` / `memory` 是否先做最小占位并给出清晰接口，再逐步实装？
+1. `xtquant` 真实接入是放在 P0 收尾还是 P1 起步更稳妥？
+2. monitoring 最小 slice 是否只做“计划失效检查”，还是同时加“强化信号提示”？
+3. memory 首版是否先写 SQLite 表，再补摘要策略？
 
 ## Decisions Made
 | Decision | Rationale |
@@ -60,6 +66,7 @@ Phase 6
 | `xtquant` 保持 mockable，不进入本轮 orchestrator | 避免把研究链路和实盘执行耦合在一起 |
 | 当前独立仓库视为源目录项目的剥离快照 | 源目录 git 历史可作为真实进度依据 |
 | 下一阶段优先补数据层持久化基础（`run_log` + execution 相关表） | 能先把执行链数据闭环打底，再接 orchestration |
+| execution 主链先以 fake broker 跑通并固化测试 | 在不依赖 `xtquant` 的前提下先验证编排正确性 |
 
 ## Errors Encountered
 | Error | Attempt | Resolution |
@@ -73,3 +80,4 @@ Phase 6
 - 源目录中的关键提交：`ee1f02db`、`bf6cc981`、`15c6faed`、`8d2734ba`、`168b0a2e`
 - 源目录中的 `feat/quant-agent-plan-only` 已合并到 `main`
 - 本轮新增持久化表和 repository 后，下一步进入 execution wiring
+- execution wiring 已完成，下一步进入 monitoring/memory 最小切片
