@@ -14,6 +14,7 @@ from src.data.repositories import (
     OrderRepository,
     PlanRepository,
     RunLogRepository,
+    RunStageEventRepository,
 )
 from src.data.schema import init_schema
 
@@ -24,6 +25,7 @@ class ResearchRuntime:
     conn: sqlite3.Connection
     plan_repo: PlanRepository
     run_log_repo: RunLogRepository
+    run_stage_event_repo: RunStageEventRepository
     order_repo: OrderRepository
     fill_repo: FillRepository
     account_snapshot_repo: AccountSnapshotRepository
@@ -50,6 +52,7 @@ def build_research_runtime(
         conn=conn,
         plan_repo=PlanRepository(conn),
         run_log_repo=RunLogRepository(conn),
+        run_stage_event_repo=RunStageEventRepository(conn),
         order_repo=OrderRepository(conn),
         fill_repo=FillRepository(conn),
         account_snapshot_repo=AccountSnapshotRepository(conn),

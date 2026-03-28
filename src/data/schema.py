@@ -69,6 +69,15 @@ create table if not exists memory_entry (
     status text not null,
     created_at text not null default current_timestamp
 );
+
+create table if not exists run_stage_event (
+    id integer primary key autoincrement,
+    run_id text not null,
+    stage text not null,
+    status text not null,
+    message text,
+    created_at text not null default current_timestamp
+);
 """
 
 

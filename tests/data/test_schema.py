@@ -25,8 +25,22 @@ def test_init_schema_creates_execution_and_run_tables(tmp_path):
             select name
             from sqlite_master
             where type='table'
-              and name in ('run_log', 'orders', 'fills', 'account_snapshot', 'memory_entry')
+              and name in (
+                'run_log',
+                'orders',
+                'fills',
+                'account_snapshot',
+                'memory_entry',
+                'run_stage_event'
+              )
             """
         ).fetchall()
     }
-    assert table_names == {"run_log", "orders", "fills", "account_snapshot", "memory_entry"}
+    assert table_names == {
+        "run_log",
+        "orders",
+        "fills",
+        "account_snapshot",
+        "memory_entry",
+        "run_stage_event",
+    }

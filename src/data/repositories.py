@@ -129,6 +129,39 @@ class RunLogRepository:
         return dict(row)
 
 
+class RunStageEventRepository:
+    def __init__(self, conn: sqlite3.Connection) -> None:
+        self.conn = conn
+
+    def append_event(
+        self,
+        run_id: str,
+        stage: str,
+        status: str,
+        message: str | None = None,
+    ) -> None:
+        self.conn.execute(
+            """
+            insert into run_stage_event (run_id, stage, status, message)
+            values (?, ?, ?, ?)
+            """,
+            (run_id, stage, status, message),
+        )
+        self.conn.commit()
+
+    def list_by_run(self, run_id: str) -> list[dict[str, Any]]:
+        rows = self.conn.execute(
+            """
+            select id, run_id, stage, status, message, created_at
+            from run_stage_event
+            where run_id = ?
+            order by id asc
+            """,
+            (run_id,),
+        ).fetchall()
+        return [dict(row) for row in rows]
+
+
 class OrderRepository:
     def __init__(self, conn: sqlite3.Connection) -> None:
         self.conn = conn

@@ -7,6 +7,7 @@ from src.data.repositories import (
     OrderRepository,
     PlanRepository,
     RunLogRepository,
+    RunStageEventRepository,
 )
 from src.data.schema import init_schema
 
@@ -155,3 +156,17 @@ def test_memory_entry_repository_round_trip(tmp_path):
     assert by_run[0]["symbol"] == "600000.SH"
     assert by_run[0]["status"] == "confirmed"
     assert len(by_type) == 1
+
+
+def test_run_stage_event_repository_round_trip(tmp_path):
+    conn = connect_db(tmp_path / "quant.db")
+    init_schema(conn)
+    repo = RunStageEventRepository(conn)
+
+    repo.append_event(run_id="run-1", stage="planning", status="running", message="start")
+    repo.append_event(run_id="run-1", stage="execution", status="running", message="orders")
+    events = repo.list_by_run("run-1")
+
+    assert len(events) == 2
+    assert events[0]["stage"] == "planning"
+    assert events[1]["stage"] == "execution"
