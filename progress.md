@@ -300,6 +300,7 @@
   - `src/data/schema.py` (updated)
   - `src/data/repositories.py` (updated)
   - `tests/data/test_repositories.py` (updated)
+  - `progress.md` (updated)
 
 ## Session: 2026-03-28 (Shadow Broker Fill Simulation)
 
@@ -312,4 +313,18 @@
 - Files created/modified:
   - `src/execution/broker_shadow.py` (updated)
   - `tests/execution/test_broker_shadow.py` (created)
+  - `progress.md` (updated)
+
+## Session: 2026-03-28 (Xtquant Preflight Diagnostics)
+
+### Phase A: Xtquant Environment Preflight
+- **Status:** complete
+- Actions taken:
+  - 新增 `run_xtquant_preflight`，检查 account 配置文件存在性/YAML 可解析性、必需键完整性、`xtquant` 可导入性
+  - 结果输出统一结构：`status`、`checks[]`、`message`，便于在执行前给出可操作诊断
+  - 新增 execution 单测，覆盖 happy path、缺失配置、缺失必需键、`xtquant` 导入失败
+- Files created/modified:
+  - `src/execution/xtquant_preflight.py` (created)
+  - `tests/execution/test_xtquant_preflight.py` (created)
+  - `README.md` (updated)
   - `progress.md` (updated)

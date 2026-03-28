@@ -38,6 +38,19 @@ python3 -m venv venv
 
 如果本地没有 `adata`，可以继续使用测试里的 fake provider 验证 orchestrator 行为。
 
+### xtquant preflight（本地执行前检查）
+
+```python
+from src.execution.xtquant_preflight import run_xtquant_preflight
+
+result = run_xtquant_preflight("config/account.yaml")
+print(result["status"])
+for check in result["checks"]:
+    print(check["name"], check["status"], check["message"])
+```
+
+该检查不会触发真实下单或连接，仅用于验证配置文件与 `xtquant` 本地环境就绪性。
+
 ## 目录
 
 ```text
