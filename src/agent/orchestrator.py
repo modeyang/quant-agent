@@ -10,6 +10,9 @@ from src.data.runtime import ResearchRuntime, build_research_runtime
 from src.execution.approval import require_manual_approval
 from src.execution.order_state_machine import OrderStateMachine
 from src.execution.reconcile import reconcile_run
+from src.memory.conflict_resolver import resolve_memory_conflicts
+from src.memory.memory_store import build_trade_memory_entries
+from src.monitoring.intraday_watch import assess_intraday_watch
 from src.planning.plan_generator import generate_plan
 from src.planning.signal_engine import score_candidate
 from src.review.postmortem import summarize_postmortem
@@ -84,7 +87,7 @@ def _execute_cycle(
     broker: Any | None,
     approval_granted: bool,
     trade_date: str,
-) -> tuple[dict[str, Any], dict[str, Any]]:
+) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any]]:
     if not plans:
         review = build_trade_review(
             trade_date=trade_date,
@@ -112,6 +115,16 @@ def _execute_cycle(
                 "notes": review.notes,
                 "postmortem": summarize_postmortem(trade_date, []),
             },
+            {
+                "status": "skipped",
+                "summary": "monitoring skipped because no candidate plans",
+                "planned_count": 0,
+                "ordered_count": 0,
+                "filled_count": 0,
+                "invalidated_symbols": [],
+                "reinforced_symbols": [],
+                "notes": [],
+            },
         )
 
     if broker is None:
@@ -129,6 +142,16 @@ def _execute_cycle(
             {
                 "status": "pending",
                 "summary": "review skipped because execution broker is unavailable",
+            },
+            {
+                "status": "pending",
+                "summary": "monitoring skipped because execution broker is unavailable",
+                "planned_count": len(plans),
+                "ordered_count": 0,
+                "filled_count": 0,
+                "invalidated_symbols": [],
+                "reinforced_symbols": [],
+                "notes": [],
             },
         )
 
@@ -238,7 +261,46 @@ def _execute_cycle(
         "notes": review.notes,
         "postmortem": summarize_postmortem(trade_date, postmortem_issues),
     }
-    return execution, review_payload
+    monitoring_payload = assess_intraday_watch(plans=plans, orders=orders, fills=fills)
+    return execution, review_payload, monitoring_payload
+
+
+def _persist_memory_entries(
+    runtime: ResearchRuntime,
+    run_id: str,
+    review_payload: dict[str, Any],
+    monitoring_payload: dict[str, Any],
+) -> dict[str, Any]:
+    raw_entries = build_trade_memory_entries(
+        run_id=run_id,
+        review_payload=review_payload,
+        monitoring_payload=monitoring_payload,
+    )
+    deduped_entries = resolve_memory_conflicts(raw_entries)
+    for entry in deduped_entries:
+        runtime.memory_entry_repo.save_entry(
+            run_id=entry["run_id"],
+            memory_type=entry["memory_type"],
+            symbol=entry.get("symbol"),
+            title=entry["title"],
+            content=entry["content"],
+            score=float(entry["score"]),
+            status=entry["status"],
+        )
+    saved_entries = runtime.memory_entry_repo.list_by_run(run_id)
+    return {
+        "status": "ready" if saved_entries else "skipped",
+        "entry_count": len(saved_entries),
+        "entries": [
+            {
+                "memory_type": item["memory_type"],
+                "title": item["title"],
+                "score": item["score"],
+                "status": item["status"],
+            }
+            for item in saved_entries
+        ],
+    }
 
 
 def run_p0_cycle(
@@ -263,6 +325,8 @@ def run_p0_cycle(
             },
             "execution": {"status": "skipped" if mode == "plan_only" else "pending"},
             "review": {"status": "pending", "summary": "review not executed"},
+            "monitoring": {"status": "pending", "summary": "monitoring not executed"},
+            "memory": {"status": "skipped", "entry_count": 0, "entries": []},
         }
 
     resolved_symbols = symbols or ["600000.SH"]
@@ -297,14 +361,35 @@ def run_p0_cycle(
                 "status": "pending",
                 "summary": "review not executed in plan_only mode",
             }
+            monitoring_payload: dict[str, Any] = {
+                "status": "pending",
+                "summary": "monitoring not executed in plan_only mode",
+                "planned_count": len(plans),
+                "ordered_count": 0,
+                "filled_count": 0,
+                "invalidated_symbols": [],
+                "reinforced_symbols": [],
+                "notes": [],
+            }
+            memory_payload: dict[str, Any] = {
+                "status": "skipped",
+                "entry_count": 0,
+                "entries": [],
+            }
         else:
-            execution_payload, review_payload = _execute_cycle(
+            execution_payload, review_payload, monitoring_payload = _execute_cycle(
                 runtime=resolved_runtime,
                 run_id=run_id,
                 plans=plans,
                 broker=broker,
                 approval_granted=approval_granted,
                 trade_date=end,
+            )
+            memory_payload = _persist_memory_entries(
+                runtime=resolved_runtime,
+                run_id=run_id,
+                review_payload=review_payload,
+                monitoring_payload=monitoring_payload,
             )
 
         run_status = "success"
@@ -328,6 +413,8 @@ def run_p0_cycle(
             },
             "execution": execution_payload,
             "review": review_payload,
+            "monitoring": monitoring_payload,
+            "memory": memory_payload,
             "run": run_record,
         }
     except Exception as exc:
@@ -347,5 +434,7 @@ def run_p0_cycle(
             },
             "execution": {"status": "failed", "reason": str(exc)},
             "review": {"status": "failed", "summary": "review skipped because run failed"},
+            "monitoring": {"status": "failed", "summary": "monitoring skipped because run failed"},
+            "memory": {"status": "failed", "entry_count": 0, "entries": []},
             "run": run_record,
         }

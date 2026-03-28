@@ -10,4 +10,5 @@ def test_build_research_runtime_returns_db_and_provider(tmp_path, fake_provider)
     assert runtime.order_repo is not None
     assert runtime.fill_repo is not None
     assert runtime.account_snapshot_repo is not None
+    assert runtime.memory_entry_repo is not None
     assert (tmp_path / "quant.db").exists()

@@ -18,6 +18,9 @@ def test_run_p0_cycle_plan_only_persists_ranked_plans(tmp_path, fake_provider):
     assert result["planning"]["plan_count"] == 1
     assert result["planning"]["plans"][0]["symbol"] == "600000.SH"
     assert result["run"]["status"] == "success"
+    assert result["monitoring"]["status"] == "pending"
+    assert result["memory"]["status"] == "skipped"
+    assert result["memory"]["entry_count"] == 0
 
     saved = runtime.plan_repo.list_by_run(result["planning"]["run_id"])
     assert len(saved) == 1
@@ -37,3 +40,4 @@ def test_run_p0_cycle_plan_only_allows_empty_plan_set(tmp_path, fake_provider):
 
     assert result["planning"]["plan_count"] == 0
     assert result["planning"]["plans"] == []
+    assert result["memory"]["entry_count"] == 0

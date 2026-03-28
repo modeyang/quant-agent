@@ -246,3 +246,51 @@ class AccountSnapshotRepository:
             (run_id,),
         ).fetchall()
         return [dict(row) for row in rows]
+
+
+class MemoryEntryRepository:
+    def __init__(self, conn: sqlite3.Connection) -> None:
+        self.conn = conn
+
+    def save_entry(
+        self,
+        run_id: str,
+        memory_type: str,
+        title: str,
+        content: str,
+        score: float,
+        status: str,
+        symbol: str | None = None,
+    ) -> None:
+        self.conn.execute(
+            """
+            insert into memory_entry (run_id, memory_type, symbol, title, content, score, status)
+            values (?, ?, ?, ?, ?, ?, ?)
+            """,
+            (run_id, memory_type, symbol, title, content, score, status),
+        )
+        self.conn.commit()
+
+    def list_by_run(self, run_id: str) -> list[dict[str, Any]]:
+        rows = self.conn.execute(
+            """
+            select id, run_id, memory_type, symbol, title, content, score, status, created_at
+            from memory_entry
+            where run_id = ?
+            order by id asc
+            """,
+            (run_id,),
+        ).fetchall()
+        return [dict(row) for row in rows]
+
+    def list_by_type(self, memory_type: str) -> list[dict[str, Any]]:
+        rows = self.conn.execute(
+            """
+            select id, run_id, memory_type, symbol, title, content, score, status, created_at
+            from memory_entry
+            where memory_type = ?
+            order by id asc
+            """,
+            (memory_type,),
+        ).fetchall()
+        return [dict(row) for row in rows]

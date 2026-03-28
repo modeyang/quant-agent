@@ -3,6 +3,7 @@ from src.data.db import connect_db
 from src.data.repositories import (
     AccountSnapshotRepository,
     FillRepository,
+    MemoryEntryRepository,
     OrderRepository,
     PlanRepository,
     RunLogRepository,
@@ -129,3 +130,26 @@ def test_account_snapshot_repository_round_trip(tmp_path):
     assert len(saved) == 1
     assert saved[0]["cash"] == 100000.0
     assert saved[0]["total_asset"] == 150000.0
+
+
+def test_memory_entry_repository_round_trip(tmp_path):
+    conn = connect_db(tmp_path / "quant.db")
+    init_schema(conn)
+    repo = MemoryEntryRepository(conn)
+
+    repo.save_entry(
+        run_id="run-1",
+        memory_type="trade_memory",
+        symbol="600000.SH",
+        title="trade review",
+        content="planned=1, executed=1, rejected=0",
+        score=0.9,
+        status="confirmed",
+    )
+    by_run = repo.list_by_run("run-1")
+    by_type = repo.list_by_type("trade_memory")
+
+    assert len(by_run) == 1
+    assert by_run[0]["symbol"] == "600000.SH"
+    assert by_run[0]["status"] == "confirmed"
+    assert len(by_type) == 1

@@ -10,6 +10,7 @@ from src.data.provider_base import MarketDataProvider
 from src.data.repositories import (
     AccountSnapshotRepository,
     FillRepository,
+    MemoryEntryRepository,
     OrderRepository,
     PlanRepository,
     RunLogRepository,
@@ -26,6 +27,7 @@ class ResearchRuntime:
     order_repo: OrderRepository
     fill_repo: FillRepository
     account_snapshot_repo: AccountSnapshotRepository
+    memory_entry_repo: MemoryEntryRepository
     db_path: Path
 
 
@@ -51,5 +53,6 @@ def build_research_runtime(
         order_repo=OrderRepository(conn),
         fill_repo=FillRepository(conn),
         account_snapshot_repo=AccountSnapshotRepository(conn),
+        memory_entry_repo=MemoryEntryRepository(conn),
         db_path=path,
     )

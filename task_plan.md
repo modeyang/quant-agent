@@ -4,7 +4,7 @@
 把已落地的 `P0` 骨架推进成可运行的 `plan_only` 真实链路：使用 `adata` 拉取数据，生成结构化计划，写入 SQLite，并由 orchestrator 返回真实结果。
 
 ## Current Phase
-Phase 7
+Phase 8
 
 ## Phases
 
@@ -45,15 +45,21 @@ Phase 7
 - **Status:** complete
 
 ### Phase 7: Monitoring & Memory Minimal Slice
-- [ ] 增加 `monitoring` 最小可运行模块（计划失效/强化检查占位）
-- [ ] 增加 `memory` 最小可运行模块（结构化写入占位）
-- [ ] 在 orchestrator 中打通 review -> memory 的最小落库链路
+- [x] 增加 `monitoring` 最小可运行模块（计划失效/强化检查占位）
+- [x] 增加 `memory` 最小可运行模块（结构化写入占位）
+- [x] 在 orchestrator 中打通 review -> memory 的最小落库链路
+- **Status:** complete
+
+### Phase 8: Real Broker Integration Planning
+- [ ] 评估 `xtquant` 接入 orchestrator 的最小安全路径（保持人工审批）
+- [ ] 设计 fake broker 与 real broker 的统一接口和切换策略
+- [ ] 增加 execution/memory 的失败重试与告警策略
 - **Status:** in_progress
 
 ## Key Questions
 1. `xtquant` 真实接入是放在 P0 收尾还是 P1 起步更稳妥？
-2. monitoring 最小 slice 是否只做“计划失效检查”，还是同时加“强化信号提示”？
-3. memory 首版是否先写 SQLite 表，再补摘要策略？
+2. real broker 接入时，是否默认继续使用 `approval_granted=False` 强制手工确认？
+3. execution 失败后的 `run_log` 状态是否需要细化为阶段级状态（planning/execution/reconcile）？
 
 ## Decisions Made
 | Decision | Rationale |
@@ -67,6 +73,7 @@ Phase 7
 | 当前独立仓库视为源目录项目的剥离快照 | 源目录 git 历史可作为真实进度依据 |
 | 下一阶段优先补数据层持久化基础（`run_log` + execution 相关表） | 能先把执行链数据闭环打底，再接 orchestration |
 | execution 主链先以 fake broker 跑通并固化测试 | 在不依赖 `xtquant` 的前提下先验证编排正确性 |
+| monitoring/memory 先以最小切片落地 | 先形成 `review -> memory` 可运行链路，再迭代策略细节 |
 
 ## Errors Encountered
 | Error | Attempt | Resolution |
@@ -81,3 +88,4 @@ Phase 7
 - 源目录中的 `feat/quant-agent-plan-only` 已合并到 `main`
 - 本轮新增持久化表和 repository 后，下一步进入 execution wiring
 - execution wiring 已完成，下一步进入 monitoring/memory 最小切片
+- monitoring/memory 最小切片已完成，下一步评估 real broker 接入

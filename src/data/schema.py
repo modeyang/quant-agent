@@ -56,6 +56,18 @@ create table if not exists account_snapshot (
     position_value real not null,
     snapshot_at text not null default current_timestamp
 );
+
+create table if not exists memory_entry (
+    id integer primary key autoincrement,
+    run_id text not null,
+    memory_type text not null,
+    symbol text,
+    title text not null,
+    content text not null,
+    score real not null,
+    status text not null,
+    created_at text not null default current_timestamp
+);
 """
 
 

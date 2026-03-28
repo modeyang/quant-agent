@@ -171,3 +171,47 @@
 |------|-------|----------|--------|--------|
 | Agent execution tests | `./venv/bin/python -m pytest tests/agent/test_execution_orchestrator.py tests/agent/test_plan_only_orchestrator.py tests/agent/test_orchestrator.py -q` | Execution wiring and plan_only behavior both pass | `6 passed` | ✓ |
 | Full regression | `./venv/bin/python -m pytest tests -q` | No regression after execution wiring | `33 passed` | ✓ |
+
+## Session: 2026-03-28 (Monitoring & Memory Minimal Slice)
+
+### Phase 7: Monitoring & Memory Minimal Slice
+- **Status:** complete
+- Actions taken:
+  - 新增 `src/monitoring` 模块（`auction_watch`、`intraday_watch`、`sector_watch`）
+  - 新增 `src/memory` 模块（`event_gate`、`memory_store`、`conflict_resolver`）
+  - 扩展 schema 与 repository，增加 `memory_entry` 持久化
+  - 在 runtime 注入 `memory_entry_repo`
+  - 在 orchestrator 中增加 `monitoring` 输出和 `review -> memory` 落库链路
+  - 修复被审批拦截时监控状态误判（`rejected` 订单不计入有效下单）
+- Files created/modified:
+  - `src/monitoring/__init__.py` (created)
+  - `src/monitoring/auction_watch.py` (created)
+  - `src/monitoring/intraday_watch.py` (created)
+  - `src/monitoring/sector_watch.py` (created)
+  - `src/memory/__init__.py` (created)
+  - `src/memory/event_gate.py` (created)
+  - `src/memory/memory_store.py` (created)
+  - `src/memory/conflict_resolver.py` (created)
+  - `src/data/schema.py` (updated)
+  - `src/data/repositories.py` (updated)
+  - `src/data/runtime.py` (updated)
+  - `src/agent/orchestrator.py` (updated)
+  - `tests/common/test_imports.py` (updated)
+  - `tests/data/test_schema.py` (updated)
+  - `tests/data/test_repositories.py` (updated)
+  - `tests/data/test_runtime.py` (updated)
+  - `tests/agent/test_orchestrator.py` (updated)
+  - `tests/agent/test_plan_only_orchestrator.py` (updated)
+  - `tests/agent/test_execution_orchestrator.py` (updated)
+  - `tests/monitoring/test_intraday_watch.py` (created)
+  - `tests/memory/test_event_gate.py` (created)
+  - `tests/memory/test_memory_store.py` (created)
+  - `task_plan.md` (updated)
+  - `progress.md` (updated)
+
+## Test Results (Monitoring & Memory Slice)
+| Test | Input | Expected | Actual | Status |
+|------|-------|----------|--------|--------|
+| Monitoring/Memory + Agent tests | `./venv/bin/python -m pytest tests/memory tests/monitoring tests/agent -q` | New modules and orchestration integration pass | `13 passed` | ✓ |
+| Data regression | `./venv/bin/python -m pytest tests/data -q` | Data-layer behavior remains stable | `13 passed` | ✓ |
+| Full regression | `./venv/bin/python -m pytest tests -q` | No regression after monitoring/memory integration | `41 passed` | ✓ |
