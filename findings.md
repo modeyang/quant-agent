@@ -59,3 +59,14 @@
 
 ## Visual/Browser Findings
 - 无
+
+## Status Update (2026-03-28)
+- `P0` 主链（planning/execution/monitoring/review/memory）已可运行，且本地回归通过
+- `shadow` 执行模式已支持可选 `auto_fill`，并可将模拟成交落库到 `fills`
+- `run_log_stage_event` 已在 orchestrator 输出中透出：
+  - `execution.stage_events`
+  - `execution.stage_duration_seconds`
+  - `execution.total_stage_duration_seconds`
+  - `review.stage_timing_summary`
+- 当前唯一未闭环项：`xtquant` 实机初始化与连接验证（依赖外部环境）
+- 下一阶段建议聚焦 `P1`：盘中轻监控增强与执行观测联动（保持人工审批边界不变）

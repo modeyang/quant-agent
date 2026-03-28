@@ -1,10 +1,10 @@
 # Task Plan: Quant Agent Plan-Only Real Integration
 
 ## Goal
-把已落地的 `P0` 骨架推进成可运行的 `plan_only` 真实链路：使用 `adata` 拉取数据，生成结构化计划，写入 SQLite，并由 orchestrator 返回真实结果。
+完成 `P0` 最小交易闭环的可运行实现与文档收口，并为 `P1` 盘中轻监控增强准备清晰入口任务。
 
 ## Current Phase
-Phase 9
+Phase 10
 
 ## Phases
 
@@ -57,18 +57,27 @@ Phase 9
 - **Status:** complete
 
 ### Phase 9: Real Broker Safe Landing
-- [ ] 在本地可用环境验证 `xtquant` 真实初始化与连接流程
+- [ ] 在本地可用环境验证 `xtquant` 真实初始化与连接流程（阻塞：需 Windows + MiniQMT 可用环境）
 - [x] 增加 real broker 下的 dry-run / shadow 模式
 - [x] 在 orchestrator 中接入 `shadow_auto_fill` 模拟成交开关并写入 fills 落库链路
 - [x] 将 `run_log_stage_event` 阶段耗时透出到 execution 结果与 review 摘要
 - [x] 补充 real broker 异常场景集成测试策略（含重试失败、配置缺失、shadow 分支）
 - [x] 将 `run_log` 阶段状态细化为 `planning/execution/monitoring/memory/completed|failed`
+- **Status:** blocked_on_env
+
+### Phase 10: Documentation Closeout & P1 Handoff
+- [x] 完成 `task_plan.md` / `progress.md` / `findings.md` 的阶段收口同步
+- [x] 标注 `Phase 9` 的唯一外部阻塞项（`xtquant` 实机环境）
+- [x] 明确 `P1` 入口任务（盘中轻监控增强 + 执行观测联动）
+- [ ] P1-1：将 `monitoring` 节点按时段拆分（盘前/盘中/尾盘）并约定输入输出 schema
+- [ ] P1-2：增加 `auction_watch` / `sector_watch` 到 orchestrator 的可配置接线（默认关闭）
+- [ ] P1-3：在 review 输出中增加“监控触发 -> 执行结果”关联摘要
 - **Status:** in_progress
 
 ## Key Questions
-1. `xtquant` 真实连接验证是否单独开 feature 分支进行？
-2. shadow 模式下是否需要增加“模拟成交”开关用于策略回测联调？（已落地）
-3. `run_log` 是否需要额外保存阶段耗时指标（duration per stage）？（已完成并透出）
+1. `xtquant` 真实连接验证是否单独开 feature 分支进行？（建议：是）
+2. P1 入口优先级是否按 `P1-1 -> P1-2 -> P1-3` 执行？
+3. 盘中轻监控接线默认是否继续保持只读（不触发自动下单）？
 
 ## Decisions Made
 | Decision | Rationale |
@@ -108,4 +117,4 @@ Phase 9
 - shadow broker 模式已完成，可在无 `xtquant` 环境下继续 execution 开发
 - shadow auto_fill 开关已接入 orchestrator，支持模拟成交落库与监控强化联动
 - stage duration 已透出到 execution/review，当前剩余阻塞仅为 `xtquant` 环境可用性验证
-- run_log 阶段状态已细化，当前剩余阻塞仅为 `xtquant` 环境可用性
+- `Phase 10` 进入文档收口与 `P1` 入口准备，后续开发优先推进监控增强链路
