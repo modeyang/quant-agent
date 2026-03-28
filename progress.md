@@ -287,3 +287,17 @@
 |------|-------|----------|--------|--------|
 | Data+Agent targeted tests | `./venv/bin/python -m pytest tests/data/test_schema.py tests/data/test_repositories.py tests/agent/test_plan_only_orchestrator.py tests/agent/test_execution_orchestrator.py -q` | Stage-aware run_log and orchestration behavior pass | `19 passed` | ✓ |
 | Full regression | `./venv/bin/python -m pytest tests -q` | No regression after run_log stage integration | `49 passed` | ✓ |
+
+## Session: 2026-03-28 (Run Log Stage Duration Tracking)
+
+### Phase 8: Run Log Stage Events
+- **Status:** complete
+- Actions taken:
+  - Added `run_log_stage_event` persistence and transition-aware stage event writes.
+  - Added `RunLogRepository.list_stage_events(run_id)` with SQLite-computed `duration_seconds`.
+  - Extended repository tests to verify stage event creation/closure from `start_run -> advance_stage -> finish_run`.
+- Files created/modified:
+  - `src/data/schema.py` (updated)
+  - `src/data/repositories.py` (updated)
+  - `tests/data/test_repositories.py` (updated)
+  - `progress.md` (updated)

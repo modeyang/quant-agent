@@ -58,6 +58,54 @@ class RunLogRepository:
     def __init__(self, conn: sqlite3.Connection) -> None:
         self.conn = conn
 
+    def _get_current_stage(self, run_id: str) -> str | None:
+        row = self.conn.execute(
+            "select stage from run_log where run_id = ?",
+            (run_id,),
+        ).fetchone()
+        if row is None:
+            return None
+        return str(row["stage"])
+
+    def _close_open_stage_event(self, run_id: str) -> None:
+        self.conn.execute(
+            """
+            update run_log_stage_event
+            set finished_at = current_timestamp
+            where id = (
+                select id
+                from run_log_stage_event
+                where run_id = ? and finished_at is null
+                order by id desc
+                limit 1
+            )
+            """,
+            (run_id,),
+        )
+
+    def _insert_stage_event(
+        self,
+        run_id: str,
+        stage: str,
+        close_immediately: bool = False,
+    ) -> None:
+        if close_immediately:
+            self.conn.execute(
+                """
+                insert into run_log_stage_event (run_id, stage, finished_at)
+                values (?, ?, current_timestamp)
+                """,
+                (run_id, stage),
+            )
+            return
+        self.conn.execute(
+            """
+            insert into run_log_stage_event (run_id, stage)
+            values (?, ?)
+            """,
+            (run_id, stage),
+        )
+
     def start_run(
         self,
         run_id: str,
@@ -79,6 +127,8 @@ class RunLogRepository:
             """,
             (run_id, mode, status, stage, message),
         )
+        self.conn.execute("delete from run_log_stage_event where run_id = ?", (run_id,))
+        self._insert_stage_event(run_id=run_id, stage=stage)
         self.conn.commit()
 
     def advance_stage(
@@ -88,6 +138,7 @@ class RunLogRepository:
         status: str = "running",
         message: str | None = None,
     ) -> None:
+        current_stage = self._get_current_stage(run_id)
         self.conn.execute(
             """
             update run_log
@@ -96,6 +147,9 @@ class RunLogRepository:
             """,
             (stage, status, message, run_id),
         )
+        if current_stage is not None and current_stage != stage:
+            self._close_open_stage_event(run_id=run_id)
+            self._insert_stage_event(run_id=run_id, stage=stage)
         self.conn.commit()
 
     def finish_run(
@@ -105,6 +159,7 @@ class RunLogRepository:
         stage: str = "completed",
         message: str | None = None,
     ) -> None:
+        current_stage = self._get_current_stage(run_id)
         self.conn.execute(
             """
             update run_log
@@ -113,6 +168,14 @@ class RunLogRepository:
             """,
             (status, stage, message, run_id),
         )
+        if current_stage is not None:
+            self._close_open_stage_event(run_id=run_id)
+            if current_stage != stage:
+                self._insert_stage_event(
+                    run_id=run_id,
+                    stage=stage,
+                    close_immediately=True,
+                )
         self.conn.commit()
 
     def get_by_run(self, run_id: str) -> dict[str, Any] | None:
@@ -127,6 +190,28 @@ class RunLogRepository:
         if row is None:
             return None
         return dict(row)
+
+    def list_stage_events(self, run_id: str) -> list[dict[str, Any]]:
+        rows = self.conn.execute(
+            """
+            select
+                id,
+                run_id,
+                stage,
+                started_at,
+                finished_at,
+                case
+                    when ((julianday(coalesce(finished_at, current_timestamp)) - julianday(started_at)) * 86400.0) < 0
+                        then 0.0
+                    else ((julianday(coalesce(finished_at, current_timestamp)) - julianday(started_at)) * 86400.0)
+                end as duration_seconds
+            from run_log_stage_event
+            where run_id = ?
+            order by id asc
+            """,
+            (run_id,),
+        ).fetchall()
+        return [dict(row) for row in rows]
 
 
 class OrderRepository:

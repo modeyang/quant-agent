@@ -26,6 +26,17 @@ create table if not exists run_log (
     finished_at text
 );
 
+create table if not exists run_log_stage_event (
+    id integer primary key autoincrement,
+    run_id text not null,
+    stage text not null,
+    started_at text not null default current_timestamp,
+    finished_at text
+);
+
+create index if not exists idx_run_log_stage_event_run_id
+on run_log_stage_event(run_id, id);
+
 create table if not exists orders (
     id integer primary key autoincrement,
     run_id text not null,

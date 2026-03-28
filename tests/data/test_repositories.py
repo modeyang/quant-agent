@@ -59,15 +59,29 @@ def test_run_log_repository_start_and_finish_run(tmp_path):
     repo = RunLogRepository(conn)
 
     repo.start_run("run-1", mode="plan_only", stage="planning", message="started")
+    stage_events_after_start = repo.list_stage_events("run-1")
     repo.advance_stage("run-1", stage="execution", message="executing")
+    stage_events_after_advance = repo.list_stage_events("run-1")
     repo.finish_run("run-1", status="success", stage="completed", message="completed")
     saved = repo.get_by_run("run-1")
+    stage_events = repo.list_stage_events("run-1")
 
     assert saved is not None
     assert saved["status"] == "success"
     assert saved["mode"] == "plan_only"
     assert saved["stage"] == "completed"
     assert saved["finished_at"] is not None
+    assert len(stage_events_after_start) == 1
+    assert stage_events_after_start[0]["stage"] == "planning"
+    assert stage_events_after_start[0]["finished_at"] is None
+    assert stage_events_after_start[0]["duration_seconds"] >= 0
+    assert [item["stage"] for item in stage_events_after_advance] == ["planning", "execution"]
+    assert stage_events_after_advance[0]["finished_at"] is not None
+    assert stage_events_after_advance[1]["finished_at"] is None
+    assert [item["stage"] for item in stage_events] == ["planning", "execution", "completed"]
+    assert [item["id"] for item in stage_events] == sorted(item["id"] for item in stage_events)
+    assert all(item["finished_at"] is not None for item in stage_events)
+    assert all(item["duration_seconds"] >= 0 for item in stage_events)
 
 
 def test_order_repository_upserts_and_updates_status(tmp_path):
