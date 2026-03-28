@@ -15,14 +15,16 @@ This repository is still in a scaffold stage. Treat `SPEC.md` as the architectur
 Most directories currently contain `.gitkeep`; add new modules inside the existing package layout instead of creating new top-level folders.
 
 ## Build, Test, and Development Commands
-No `pyproject.toml` or `Makefile` is committed yet, so use direct Python commands:
+Use `uv` as the default tool for Python dependency management and execution:
 
-- `python -m venv venv && source venv/bin/activate`: create a local environment
-- `pip install akshare adata xtquant pandas numpy pyyaml loguru pytest`: install runtime and test dependencies
-- `python -m compileall src`: quick syntax check before commit
-- `pytest tests -q`: run the test suite
+- `uv sync --group dev --group research`: create/update the local environment with test and research dependencies
+- `uv run python -m compileall src`: quick syntax check before commit
+- `uv run pytest tests -q`: run the test suite
+- `uv run quant-agent run --mode plan_only --output json`: run the safe default entrypoint
 
-If you add a reusable workflow, document it here and in the PR description.
+If a reusable workflow changes, document it here and in the PR description.
+
+Avoid mixing `pip`/`venv` commands into the primary workflow unless there is a concrete compatibility reason.
 
 ## Coding Style & Naming Conventions
 Use Python with 4-space indentation and PEP 8 naming:

@@ -26,20 +26,19 @@ A 股量化交易操作系统，按 Harness Engineering 方法构建。
 ### 创建本地环境
 
 ```bash
-python3 -m venv venv
-./venv/bin/python -m pip install pytest pyyaml adata
+uv sync --group dev --group research
 ```
 
 ### 运行当前测试
 
 ```bash
-./venv/bin/python -m pytest tests/common tests/data tests/planning tests/execution tests/review tests/agent -v
+uv run pytest tests/common tests/data tests/planning tests/execution tests/review tests/agent -v
 ```
 
 ### 当前 P0 入口
 
 ```bash
-./venv/bin/python -c "from src.agent.orchestrator import run_p0_cycle; print(run_p0_cycle())"
+uv run python -c "from src.agent.orchestrator import run_p0_cycle; print(run_p0_cycle())"
 ```
 
 如果本地没有 `adata`，可以继续使用测试里的 fake provider 验证 orchestrator 行为。
@@ -49,38 +48,33 @@ python3 -m venv venv
 先安装可执行脚本入口：
 
 ```bash
-./venv/bin/python -m pip install -e .
+uv sync --group dev --group research
 ```
 
 运行计划模式（安全默认：`plan_only`、`kill_switch=true`）：
 
 ```bash
-quant-agent run --mode plan_only --output json
+uv run quant-agent run --mode plan_only --output json
 ```
 
 运行手动执行模式（示例：显式审批、严格对账、关闭 kill switch）：
 
 ```bash
-quant-agent run --mode manual_execute --broker-mode xtquant --approval-granted --strict-reconcile --no-kill-switch --output json
+uv run quant-agent run --mode manual_execute --broker-mode xtquant --approval-granted --strict-reconcile --no-kill-switch --output json
 ```
 
 打印推荐 crontab 模板：
 
 ```bash
-quant-agent cron-template --workspace "$(pwd)"
+uv run quant-agent cron-template --workspace "$(pwd)"
 ```
 
 更多调度示例见：[docs/cron.example.md](docs/cron.example.md)。
 
 ### xtquant preflight（本地执行前检查）
 
-```python
-from src.execution.xtquant_preflight import run_xtquant_preflight
-
-result = run_xtquant_preflight("config/account.yaml")
-print(result["status"])
-for check in result["checks"]:
-    print(check["name"], check["status"], check["message"])
+```bash
+uv run python -c "from src.execution.xtquant_preflight import run_xtquant_preflight; import json; print(json.dumps(run_xtquant_preflight('config/account.yaml'), ensure_ascii=False, indent=2))"
 ```
 
 该检查不会触发真实下单或连接，仅用于验证配置文件与 `xtquant` 本地环境就绪性。
