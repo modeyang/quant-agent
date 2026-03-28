@@ -239,6 +239,14 @@
 | Broker + execution targeted tests | `./venv/bin/python -m pytest tests/execution/test_broker_factory.py tests/agent/test_execution_orchestrator.py -q` | Broker resolution and retry behavior pass | `9 passed` | ✓ |
 | Full regression | `./venv/bin/python -m pytest tests -q` | No regression after broker/retry changes | `47 passed` | ✓ |
 
+## Session: 2026-03-28 (Execution Alert Channel)
+- **Status:** complete
+- Actions taken:
+  - 新增 `src/monitoring/alert_channel.py`，支持 `stdout` 与 `file` JSONL 告警投递，并在通道失败时返回结构化错误
+  - 在 `run_p0_cycle` 末尾统一派发 execution alerts，新增 `execution.alert_delivery`
+  - 为 broker 不可用路径补充 `connection_failure` 告警，并保留 `place_order_failed` / `reconcile_mismatch` 告警链路
+  - 增加 `tests/monitoring/test_alert_channel.py` 及 orchestrator 集成断言
+
 ## Session: 2026-03-28 (Shadow Mode Without Xtquant)
 
 ### Phase 9: Real Broker Safe Landing (Partial)

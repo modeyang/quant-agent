@@ -31,6 +31,8 @@ def test_run_p0_cycle_execute_mode_persists_orders_fills_and_run_log(
     assert result["execution"]["order_count"] == 1
     assert result["execution"]["fill_count"] == 1
     assert result["execution"]["shadow_order_count"] == 0
+    assert result["execution"]["alerts"] == []
+    assert result["execution"]["alert_delivery"]["status"] == "no_alerts"
     assert result["execution"]["total_stage_duration_seconds"] >= 0.0
     assert "planning" in result["execution"]["stage_duration_seconds"]
     assert "execution" in result["execution"]["stage_duration_seconds"]
@@ -112,6 +114,10 @@ def test_run_p0_cycle_execute_mode_requires_broker(tmp_path, fake_provider):
 
     assert result["execution"]["status"] == "unavailable"
     assert "missing broker" in result["execution"]["reason"]
+    assert len(result["execution"]["alerts"]) == 1
+    assert result["execution"]["alerts"][0]["type"] == "connection_failure"
+    assert result["execution"]["alert_delivery"]["status"] == "delivered"
+    assert result["execution"]["alert_delivery"]["alerts_count"] == 1
     assert result["execution"]["shadow_order_count"] == 0
     assert result["execution"]["total_stage_duration_seconds"] >= 0.0
     assert "failed" in result["execution"]["stage_duration_seconds"]
@@ -142,6 +148,9 @@ def test_run_p0_cycle_execute_mode_with_xtquant_mode_reports_config_error(tmp_pa
 
     assert result["execution"]["status"] == "unavailable"
     assert "account config not found" in result["execution"]["reason"]
+    assert len(result["execution"]["alerts"]) == 1
+    assert result["execution"]["alerts"][0]["type"] == "connection_failure"
+    assert result["execution"]["alert_delivery"]["status"] == "delivered"
     assert result["execution"]["shadow_order_count"] == 0
 
 
@@ -180,6 +189,7 @@ def test_run_p0_cycle_execute_mode_retries_and_succeeds(tmp_path, fake_provider)
     assert result["execution"]["status"] == "done"
     assert result["execution"]["shadow_order_count"] == 0
     assert result["execution"]["alerts"] == []
+    assert result["execution"]["alert_delivery"]["status"] == "no_alerts"
     assert len(orders) == 1
     assert orders[0]["status"] == "reconciled"
     assert len(fills) == 1
@@ -221,6 +231,8 @@ def test_run_p0_cycle_execute_mode_fails_after_retries_exhausted(tmp_path, fake_
     assert result["execution"]["shadow_order_count"] == 0
     assert len(result["execution"]["alerts"]) == 1
     assert result["execution"]["alerts"][0]["type"] == "place_order_failed"
+    assert result["execution"]["alert_delivery"]["status"] == "delivered"
+    assert result["execution"]["alert_delivery"]["alerts_count"] == 1
     assert len(orders) == 1
     assert orders[0]["status"] == "rejected"
     assert fills == []
@@ -254,6 +266,7 @@ def test_run_p0_cycle_execute_mode_shadow_without_real_broker(tmp_path, fake_pro
     assert result["execution"]["fill_count"] == 0
     assert result["execution"]["shadow_order_count"] == 1
     assert result["execution"]["alerts"] == []
+    assert result["execution"]["alert_delivery"]["status"] == "no_alerts"
     assert orders[0]["status"] == "shadow_submitted"
     assert fills == []
     assert run_log is not None
@@ -332,6 +345,7 @@ def test_run_p0_cycle_execute_mode_kill_switch_blocks_all_orders(
     assert result["execution"]["order_count"] == 0
     assert result["execution"]["risk_rejected_count"] == 1
     assert result["execution"]["alerts"][0]["type"] == "kill_switch"
+    assert result["execution"]["alert_delivery"]["status"] == "delivered"
     assert result["memory"]["status"] == "skipped"
     assert orders == []
     assert fills == []
@@ -375,6 +389,8 @@ def test_run_p0_cycle_execute_mode_strict_reconcile_fails_on_broker_mismatch(tmp
     assert result["execution"]["broker_reconcile"]["strict_ok"] is False
     assert result["execution"]["broker_reconcile"]["missing_on_broker_order_ids"] != []
     assert any(alert["type"] == "reconcile_mismatch" for alert in result["execution"]["alerts"])
+    assert result["execution"]["alert_delivery"]["status"] == "delivered"
+    assert result["execution"]["alert_delivery"]["alerts_count"] >= 1
     assert run_log is not None
     assert run_log["status"] == "failed"
     assert run_log["stage"] == "failed"

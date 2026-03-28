@@ -19,6 +19,13 @@ execution:
   max_order_notional: 200000.0
   strict_reconcile: false
 
+# === 告警通道 ===
+alerts:
+  enabled: true
+  channels:
+    - stdout
+  file_path: data/logs/alerts.jsonl
+
 # === 数据源 ===
 data:
   akshare:

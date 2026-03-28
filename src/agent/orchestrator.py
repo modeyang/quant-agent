@@ -13,6 +13,7 @@ from src.execution.order_state_machine import OrderStateMachine
 from src.execution.reconcile import reconcile_run, reconcile_with_broker_snapshot
 from src.memory.conflict_resolver import resolve_memory_conflicts
 from src.memory.memory_store import build_trade_memory_entries
+from src.monitoring.alert_channel import dispatch_alerts, normalize_alert_config
 from src.monitoring.intraday_watch import assess_intraday_watch
 from src.planning.plan_generator import generate_plan
 from src.planning.signal_engine import score_candidate
@@ -63,6 +64,31 @@ def _load_execution_controls() -> dict[str, Any]:
         ),
         "strict_reconcile": bool(execution.get("strict_reconcile", defaults["strict_reconcile"])),
     }
+
+
+def _load_alert_controls() -> dict[str, Any]:
+    defaults: dict[str, Any] = {
+        "enabled": True,
+        "channels": ["stdout"],
+        "file_path": "data/logs/alerts.jsonl",
+    }
+    config_path = Path("config/default.yaml")
+    if not config_path.exists():
+        return defaults
+
+    with config_path.open("r", encoding="utf-8") as file:
+        raw = yaml.safe_load(file) or {}
+
+    alerts_raw = raw.get("alerts", {})
+    if not isinstance(alerts_raw, dict):
+        return defaults
+
+    merged = {
+        "enabled": alerts_raw.get("enabled", defaults["enabled"]),
+        "channels": alerts_raw.get("channels", defaults["channels"]),
+        "file_path": alerts_raw.get("file_path", defaults["file_path"]),
+    }
+    return normalize_alert_config(merged)
 
 
 def _derive_candidates(bars: list[Any]) -> list[dict[str, Any]]:
@@ -610,6 +636,25 @@ def _build_stage_timing_payload(runtime: ResearchRuntime, run_id: str) -> dict[s
     }
 
 
+def _attach_alert_delivery(
+    run_id: str,
+    execution_payload: dict[str, Any],
+    alert_controls: dict[str, Any],
+) -> dict[str, Any]:
+    raw_alerts = execution_payload.get("alerts", [])
+    alerts = raw_alerts if isinstance(raw_alerts, list) else []
+    alert_delivery = dispatch_alerts(
+        run_id=run_id,
+        alerts=alerts,
+        config=alert_controls,
+    )
+    return {
+        **execution_payload,
+        "alerts": alerts,
+        "alert_delivery": alert_delivery,
+    }
+
+
 def run_p0_cycle(
     mode: str = "plan_only",
     runtime: ResearchRuntime | None = None,
@@ -646,6 +691,7 @@ def run_p0_cycle(
         }
 
     execution_controls = _load_execution_controls()
+    alert_controls = _load_alert_controls()
     resolved_kill_switch = (
         execution_controls["kill_switch"] if kill_switch is None else bool(kill_switch)
     )
@@ -785,7 +831,16 @@ def run_p0_cycle(
                         "blocked_count": 0,
                         "unmatched_order_ids": [],
                         "broker_reconcile": {"strict_ok": True},
-                        "alerts": [],
+                        "alerts": [
+                            {
+                                "type": "connection_failure",
+                                "message": "execution broker unavailable",
+                                "details": {
+                                    "broker_mode": broker_mode,
+                                    "reason": broker_error or "missing broker for execute mode",
+                                },
+                            }
+                        ],
                     }
                     review_payload = {
                         "status": "pending",
@@ -860,6 +915,11 @@ def run_p0_cycle(
             "stage_duration_seconds": stage_timing["stage_duration_seconds"],
             "total_stage_duration_seconds": stage_timing["total_stage_duration_seconds"],
         }
+        execution_payload = _attach_alert_delivery(
+            run_id=run_id,
+            execution_payload=execution_payload,
+            alert_controls=alert_controls,
+        )
         review_payload = {
             **review_payload,
             "stage_timing_summary": stage_timing["stage_timing_summary"],
@@ -889,6 +949,18 @@ def run_p0_cycle(
         )
         run_record = resolved_runtime.run_log_repo.get_by_run(run_id)
         stage_timing = _build_stage_timing_payload(resolved_runtime, run_id)
+        failed_execution = _attach_alert_delivery(
+            run_id=run_id,
+            execution_payload={
+                "status": "failed",
+                "reason": str(exc),
+                "stage_events": stage_timing["stage_events"],
+                "stage_duration_seconds": stage_timing["stage_duration_seconds"],
+                "total_stage_duration_seconds": stage_timing["total_stage_duration_seconds"],
+                "alerts": [],
+            },
+            alert_controls=alert_controls,
+        )
         return {
             "planning": {
                 "status": "failed",
@@ -897,13 +969,7 @@ def run_p0_cycle(
                 "plan_count": 0,
                 "plans": [],
             },
-            "execution": {
-                "status": "failed",
-                "reason": str(exc),
-                "stage_events": stage_timing["stage_events"],
-                "stage_duration_seconds": stage_timing["stage_duration_seconds"],
-                "total_stage_duration_seconds": stage_timing["total_stage_duration_seconds"],
-            },
+            "execution": failed_execution,
             "review": {
                 "status": "failed",
                 "summary": "review skipped because run failed",
