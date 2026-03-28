@@ -42,3 +42,7 @@ def test_run_p0_cycle_plan_only_allows_empty_plan_set(tmp_path, fake_provider):
     assert result["planning"]["plan_count"] == 0
     assert result["planning"]["plans"] == []
     assert result["memory"]["entry_count"] == 0
+    assert "stage_events" in result["execution"]
+    assert result["execution"]["stage_duration_seconds"]["planning"] >= 0.0
+    assert "completed" in result["execution"]["stage_duration_seconds"]
+    assert "planning=" in result["review"]["stage_timing_summary"]

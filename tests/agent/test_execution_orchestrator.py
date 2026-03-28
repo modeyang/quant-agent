@@ -31,7 +31,12 @@ def test_run_p0_cycle_execute_mode_persists_orders_fills_and_run_log(
     assert result["execution"]["order_count"] == 1
     assert result["execution"]["fill_count"] == 1
     assert result["execution"]["shadow_order_count"] == 0
+    assert result["execution"]["total_stage_duration_seconds"] >= 0.0
+    assert "planning" in result["execution"]["stage_duration_seconds"]
+    assert "execution" in result["execution"]["stage_duration_seconds"]
+    assert "completed" in result["execution"]["stage_duration_seconds"]
     assert result["review"]["status"] == "ready"
+    assert "execution=" in result["review"]["stage_timing_summary"]
     assert result["monitoring"]["status"] == "reinforced"
     assert result["memory"]["status"] == "ready"
     assert result["memory"]["entry_count"] >= 1
@@ -108,6 +113,9 @@ def test_run_p0_cycle_execute_mode_requires_broker(tmp_path, fake_provider):
     assert result["execution"]["status"] == "unavailable"
     assert "missing broker" in result["execution"]["reason"]
     assert result["execution"]["shadow_order_count"] == 0
+    assert result["execution"]["total_stage_duration_seconds"] >= 0.0
+    assert "failed" in result["execution"]["stage_duration_seconds"]
+    assert "failed=" in result["review"]["stage_timing_summary"]
     assert result["review"]["status"] == "pending"
     assert result["monitoring"]["status"] == "pending"
     assert result["memory"]["status"] == "skipped"
@@ -286,6 +294,10 @@ def test_run_p0_cycle_execute_mode_shadow_auto_fill_persists_simulated_fill(tmp_
     assert len(fills) == 1
     assert fills[0]["order_id"] == orders[0]["order_id"]
     assert fills[0]["filled_at"] == "2026-03-28 09:35:00"
+    assert "monitoring" in result["execution"]["stage_duration_seconds"]
+    assert "memory" in result["execution"]["stage_duration_seconds"]
+    assert "completed" in result["execution"]["stage_duration_seconds"]
+    assert "monitoring=" in result["review"]["stage_timing_summary"]
     assert run_log is not None
     assert run_log["status"] == "success"
     assert run_log["stage"] == "completed"

@@ -353,3 +353,24 @@
 |------|-------|----------|--------|--------|
 | Shadow targeted tests | `./venv/bin/python -m pytest tests/execution/test_broker_shadow.py tests/execution/test_broker_factory.py tests/agent/test_execution_orchestrator.py -q` | Shadow auto-fill wiring and persistence pass | `16 passed` | ✓ |
 | Full regression | `./venv/bin/python -m pytest tests -q` | No regression after shadow auto-fill integration | `58 passed` | ✓ |
+
+## Session: 2026-03-28 (Run Stage Timing Visibility)
+
+### Phase 9: Stage Duration Output Integration
+- **Status:** complete
+- Actions taken:
+  - 在 orchestrator 中增加 `run_log_stage_event` 汇总逻辑，输出 `stage_events`、`stage_duration_seconds`、`total_stage_duration_seconds`
+  - 将阶段耗时透出到 `execution` 返回结构，并将 `stage_timing_summary` 注入 `review` 摘要
+  - 覆盖成功执行、plan_only、以及 broker 不可用失败路径的阶段耗时断言
+- Files created/modified:
+  - `src/agent/orchestrator.py` (updated)
+  - `tests/agent/test_plan_only_orchestrator.py` (updated)
+  - `tests/agent/test_execution_orchestrator.py` (updated)
+  - `task_plan.md` (updated)
+  - `progress.md` (updated)
+
+## Test Results (Run Stage Timing Visibility)
+| Test | Input | Expected | Actual | Status |
+|------|-------|----------|--------|--------|
+| Agent targeted tests | `./venv/bin/python -m pytest tests/agent/test_orchestrator.py tests/agent/test_plan_only_orchestrator.py tests/agent/test_execution_orchestrator.py -q` | Stage timing fields exposed for plan_only/execute success/failure | `11 passed` | ✓ |
+| Full regression | `./venv/bin/python -m pytest tests -q` | No regression after stage timing output integration | `58 passed` | ✓ |

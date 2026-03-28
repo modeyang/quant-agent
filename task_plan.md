@@ -60,6 +60,7 @@ Phase 9
 - [ ] 在本地可用环境验证 `xtquant` 真实初始化与连接流程
 - [x] 增加 real broker 下的 dry-run / shadow 模式
 - [x] 在 orchestrator 中接入 `shadow_auto_fill` 模拟成交开关并写入 fills 落库链路
+- [x] 将 `run_log_stage_event` 阶段耗时透出到 execution 结果与 review 摘要
 - [x] 补充 real broker 异常场景集成测试策略（含重试失败、配置缺失、shadow 分支）
 - [x] 将 `run_log` 阶段状态细化为 `planning/execution/monitoring/memory/completed|failed`
 - **Status:** in_progress
@@ -67,7 +68,7 @@ Phase 9
 ## Key Questions
 1. `xtquant` 真实连接验证是否单独开 feature 分支进行？
 2. shadow 模式下是否需要增加“模拟成交”开关用于策略回测联调？（已落地）
-3. `run_log` 是否需要额外保存阶段耗时指标（duration per stage）？
+3. `run_log` 是否需要额外保存阶段耗时指标（duration per stage）？（已完成并透出）
 
 ## Decisions Made
 | Decision | Rationale |
@@ -87,6 +88,7 @@ Phase 9
 | 在 `xtquant` 不可用时优先推进 shadow 模式和异常策略 | 保持开发连续性，不阻塞 execution 主链演进 |
 | shadow 模式增加可选 `auto_fill` 并由 orchestrator 透传 | 支持 dry-run 下的成交模拟与回测联调，不改变默认行为 |
 | `run_log` 记录阶段状态并在 orchestrator 中实时推进 | 提升执行可观测性，方便问题定位和运营审计 |
+| 将 `run_log_stage_event` 输出到 execution/review 结果 | 让阶段耗时可直接用于复盘摘要与外部观测 |
 
 ## Errors Encountered
 | Error | Attempt | Resolution |
@@ -105,4 +107,5 @@ Phase 9
 - broker factory 与 execution 重试告警已完成，下一步是 real broker 实机验证
 - shadow broker 模式已完成，可在无 `xtquant` 环境下继续 execution 开发
 - shadow auto_fill 开关已接入 orchestrator，支持模拟成交落库与监控强化联动
+- stage duration 已透出到 execution/review，当前剩余阻塞仅为 `xtquant` 环境可用性验证
 - run_log 阶段状态已细化，当前剩余阻塞仅为 `xtquant` 环境可用性

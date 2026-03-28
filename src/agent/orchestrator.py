@@ -388,6 +388,47 @@ def _persist_memory_entries(
     }
 
 
+def _build_stage_timing_payload(runtime: ResearchRuntime, run_id: str) -> dict[str, Any]:
+    raw_events = runtime.run_log_repo.list_stage_events(run_id)
+    stage_events: list[dict[str, Any]] = []
+    stage_duration_seconds: dict[str, float] = {}
+    total_stage_duration_seconds = 0.0
+
+    for item in raw_events:
+        stage = str(item.get("stage", "unknown"))
+        try:
+            duration_seconds = max(0.0, float(item.get("duration_seconds", 0.0)))
+        except (TypeError, ValueError):
+            duration_seconds = 0.0
+
+        stage_events.append(
+            {
+                "stage": stage,
+                "started_at": item.get("started_at"),
+                "finished_at": item.get("finished_at"),
+                "duration_seconds": round(duration_seconds, 6),
+            }
+        )
+        stage_duration_seconds[stage] = round(
+            stage_duration_seconds.get(stage, 0.0) + duration_seconds,
+            6,
+        )
+        total_stage_duration_seconds += duration_seconds
+
+    summary = ", ".join(
+        f"{stage}={duration:.3f}s" for stage, duration in stage_duration_seconds.items()
+    )
+    if not summary:
+        summary = "no stage timing available"
+
+    return {
+        "stage_events": stage_events,
+        "stage_duration_seconds": stage_duration_seconds,
+        "total_stage_duration_seconds": round(total_stage_duration_seconds, 6),
+        "stage_timing_summary": summary,
+    }
+
+
 def run_p0_cycle(
     mode: str = "plan_only",
     runtime: ResearchRuntime | None = None,
@@ -560,6 +601,17 @@ def run_p0_cycle(
             message=execution_payload.get("reason", execution_payload["status"]),
         )
         run_record = resolved_runtime.run_log_repo.get_by_run(run_id)
+        stage_timing = _build_stage_timing_payload(resolved_runtime, run_id)
+        execution_payload = {
+            **execution_payload,
+            "stage_events": stage_timing["stage_events"],
+            "stage_duration_seconds": stage_timing["stage_duration_seconds"],
+            "total_stage_duration_seconds": stage_timing["total_stage_duration_seconds"],
+        }
+        review_payload = {
+            **review_payload,
+            "stage_timing_summary": stage_timing["stage_timing_summary"],
+        }
 
         return {
             "planning": {
@@ -584,6 +636,7 @@ def run_p0_cycle(
             message=str(exc),
         )
         run_record = resolved_runtime.run_log_repo.get_by_run(run_id)
+        stage_timing = _build_stage_timing_payload(resolved_runtime, run_id)
         return {
             "planning": {
                 "status": "failed",
@@ -592,8 +645,18 @@ def run_p0_cycle(
                 "plan_count": 0,
                 "plans": [],
             },
-            "execution": {"status": "failed", "reason": str(exc)},
-            "review": {"status": "failed", "summary": "review skipped because run failed"},
+            "execution": {
+                "status": "failed",
+                "reason": str(exc),
+                "stage_events": stage_timing["stage_events"],
+                "stage_duration_seconds": stage_timing["stage_duration_seconds"],
+                "total_stage_duration_seconds": stage_timing["total_stage_duration_seconds"],
+            },
+            "review": {
+                "status": "failed",
+                "summary": "review skipped because run failed",
+                "stage_timing_summary": stage_timing["stage_timing_summary"],
+            },
             "monitoring": {"status": "failed", "summary": "monitoring skipped because run failed"},
             "memory": {"status": "failed", "entry_count": 0, "entries": []},
             "run": run_record,
