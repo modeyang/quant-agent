@@ -63,19 +63,38 @@ class RunLogRepository:
         run_id: str,
         mode: str,
         status: str = "running",
+        stage: str = "planning",
         message: str | None = None,
     ) -> None:
         self.conn.execute(
             """
-            insert into run_log (run_id, mode, status, message)
-            values (?, ?, ?, ?)
+            insert into run_log (run_id, mode, status, stage, message)
+            values (?, ?, ?, ?, ?)
             on conflict(run_id) do update set
                 mode = excluded.mode,
                 status = excluded.status,
+                stage = excluded.stage,
                 message = excluded.message,
                 finished_at = null
             """,
-            (run_id, mode, status, message),
+            (run_id, mode, status, stage, message),
+        )
+        self.conn.commit()
+
+    def advance_stage(
+        self,
+        run_id: str,
+        stage: str,
+        status: str = "running",
+        message: str | None = None,
+    ) -> None:
+        self.conn.execute(
+            """
+            update run_log
+            set stage = ?, status = ?, message = ?
+            where run_id = ?
+            """,
+            (stage, status, message, run_id),
         )
         self.conn.commit()
 
@@ -83,22 +102,23 @@ class RunLogRepository:
         self,
         run_id: str,
         status: str,
+        stage: str = "completed",
         message: str | None = None,
     ) -> None:
         self.conn.execute(
             """
             update run_log
-            set status = ?, message = ?, finished_at = current_timestamp
+            set status = ?, stage = ?, message = ?, finished_at = current_timestamp
             where run_id = ?
             """,
-            (status, message, run_id),
+            (status, stage, message, run_id),
         )
         self.conn.commit()
 
     def get_by_run(self, run_id: str) -> dict[str, Any] | None:
         row = self.conn.execute(
             """
-            select id, run_id, mode, status, message, started_at, finished_at
+            select id, run_id, mode, status, stage, message, started_at, finished_at
             from run_log
             where run_id = ?
             """,

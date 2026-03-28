@@ -43,6 +43,7 @@ def test_run_p0_cycle_execute_mode_persists_orders_fills_and_run_log(
     assert len(memory_entries) >= 1
     assert run_log is not None
     assert run_log["status"] == "success"
+    assert run_log["stage"] == "completed"
 
 
 def test_run_p0_cycle_execute_mode_blocks_without_manual_approval(
@@ -84,6 +85,7 @@ def test_run_p0_cycle_execute_mode_blocks_without_manual_approval(
     assert len(memory_entries) >= 1
     assert run_log is not None
     assert run_log["status"] == "success"
+    assert run_log["stage"] == "completed"
 
 
 def test_run_p0_cycle_execute_mode_requires_broker(tmp_path, fake_provider):
@@ -111,6 +113,7 @@ def test_run_p0_cycle_execute_mode_requires_broker(tmp_path, fake_provider):
     assert result["memory"]["status"] == "skipped"
     assert run_log is not None
     assert run_log["status"] == "failed"
+    assert run_log["stage"] == "failed"
 
 
 def test_run_p0_cycle_execute_mode_with_xtquant_mode_reports_config_error(tmp_path, fake_provider):
@@ -215,6 +218,7 @@ def test_run_p0_cycle_execute_mode_fails_after_retries_exhausted(tmp_path, fake_
     assert fills == []
     assert run_log is not None
     assert run_log["status"] == "failed"
+    assert run_log["stage"] == "failed"
 
 
 def test_run_p0_cycle_execute_mode_shadow_without_real_broker(tmp_path, fake_provider):
@@ -246,3 +250,4 @@ def test_run_p0_cycle_execute_mode_shadow_without_real_broker(tmp_path, fake_pro
     assert fills == []
     assert run_log is not None
     assert run_log["status"] == "success"
+    assert run_log["stage"] == "completed"

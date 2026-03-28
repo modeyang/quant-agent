@@ -262,3 +262,28 @@
 |------|-------|----------|--------|--------|
 | Broker + execution targeted tests | `./venv/bin/python -m pytest tests/execution/test_broker_factory.py tests/agent/test_execution_orchestrator.py -q` | Shadow mode and retry logic pass | `11 passed` | ✓ |
 | Full regression | `./venv/bin/python -m pytest tests -q` | No regression after shadow-mode integration | `49 passed` | ✓ |
+
+## Session: 2026-03-28 (Run Log Stage Tracking)
+
+### Phase 9: Real Broker Safe Landing (Incremental)
+- **Status:** in_progress
+- Actions taken:
+  - 为 `run_log` 增加 `stage` 字段并在 schema 初始化中兼容增量补列
+  - 扩展 `RunLogRepository`：支持 `advance_stage` 和带 stage 的 `start_run` / `finish_run`
+  - 在 orchestrator 中接入阶段流转：`planning -> execution -> monitoring -> memory -> completed/failed`
+  - 更新 agent/data 测试，校验成功与失败路径下 `run_log.stage` 结果
+- Files created/modified:
+  - `src/data/schema.py` (updated)
+  - `src/data/repositories.py` (updated)
+  - `src/agent/orchestrator.py` (updated)
+  - `tests/data/test_repositories.py` (updated)
+  - `tests/agent/test_plan_only_orchestrator.py` (updated)
+  - `tests/agent/test_execution_orchestrator.py` (updated)
+  - `task_plan.md` (updated)
+  - `progress.md` (updated)
+
+## Test Results (Run Log Stage Tracking)
+| Test | Input | Expected | Actual | Status |
+|------|-------|----------|--------|--------|
+| Data+Agent targeted tests | `./venv/bin/python -m pytest tests/data/test_schema.py tests/data/test_repositories.py tests/agent/test_plan_only_orchestrator.py tests/agent/test_execution_orchestrator.py -q` | Stage-aware run_log and orchestration behavior pass | `19 passed` | ✓ |
+| Full regression | `./venv/bin/python -m pytest tests -q` | No regression after run_log stage integration | `49 passed` | ✓ |

@@ -58,13 +58,15 @@ def test_run_log_repository_start_and_finish_run(tmp_path):
     init_schema(conn)
     repo = RunLogRepository(conn)
 
-    repo.start_run("run-1", mode="plan_only", message="started")
-    repo.finish_run("run-1", status="success", message="completed")
+    repo.start_run("run-1", mode="plan_only", stage="planning", message="started")
+    repo.advance_stage("run-1", stage="execution", message="executing")
+    repo.finish_run("run-1", status="success", stage="completed", message="completed")
     saved = repo.get_by_run("run-1")
 
     assert saved is not None
     assert saved["status"] == "success"
     assert saved["mode"] == "plan_only"
+    assert saved["stage"] == "completed"
     assert saved["finished_at"] is not None
 
 

@@ -18,6 +18,7 @@ def test_run_p0_cycle_plan_only_persists_ranked_plans(tmp_path, fake_provider):
     assert result["planning"]["plan_count"] == 1
     assert result["planning"]["plans"][0]["symbol"] == "600000.SH"
     assert result["run"]["status"] == "success"
+    assert result["run"]["stage"] == "completed"
     assert result["monitoring"]["status"] == "pending"
     assert result["memory"]["status"] == "skipped"
     assert result["memory"]["entry_count"] == 0

@@ -20,6 +20,7 @@ create table if not exists run_log (
     run_id text not null unique,
     mode text not null,
     status text not null,
+    stage text not null default 'init',
     message text,
     started_at text not null default current_timestamp,
     finished_at text
@@ -73,4 +74,10 @@ create table if not exists memory_entry (
 
 def init_schema(conn: sqlite3.Connection) -> None:
     conn.executescript(SCHEMA_SQL)
+    columns = {
+        row["name"]
+        for row in conn.execute("pragma table_info(run_log)").fetchall()
+    }
+    if "stage" not in columns:
+        conn.execute("alter table run_log add column stage text not null default 'init'")
     conn.commit()

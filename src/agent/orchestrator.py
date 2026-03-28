@@ -347,11 +347,13 @@ def run_p0_cycle(
     resolved_symbols = symbols or ["600000.SH"]
     resolved_min_score = min_score if min_score is not None else _load_min_score()
     run_id = datetime.now().strftime("%Y%m%d-%H%M%S")
+    current_stage = "planning"
 
     resolved_runtime.run_log_repo.start_run(
         run_id=run_id,
         mode=mode,
         status="running",
+        stage=current_stage,
         message="cycle started",
     )
 
@@ -393,6 +395,13 @@ def run_p0_cycle(
                 "entries": [],
             }
         else:
+            current_stage = "execution"
+            resolved_runtime.run_log_repo.advance_stage(
+                run_id=run_id,
+                stage=current_stage,
+                status="running",
+                message="executing orders",
+            )
             resolved_broker, broker_error = resolve_execution_broker(
                 explicit_broker=broker,
                 broker_mode=broker_mode,
@@ -440,6 +449,20 @@ def run_p0_cycle(
                     trade_date=end,
                     max_place_retries=max(1, int(max_place_retries)),
                 )
+                current_stage = "monitoring"
+                resolved_runtime.run_log_repo.advance_stage(
+                    run_id=run_id,
+                    stage=current_stage,
+                    status="running",
+                    message=f"monitoring status={monitoring_payload['status']}",
+                )
+                current_stage = "memory"
+                resolved_runtime.run_log_repo.advance_stage(
+                    run_id=run_id,
+                    stage=current_stage,
+                    status="running",
+                    message="persisting memory entries",
+                )
                 memory_payload = _persist_memory_entries(
                     runtime=resolved_runtime,
                     run_id=run_id,
@@ -450,9 +473,13 @@ def run_p0_cycle(
         run_status = "success"
         if execution_payload["status"] in {"unavailable", "failed"}:
             run_status = "failed"
+            final_stage = "failed"
+        else:
+            final_stage = "completed"
         resolved_runtime.run_log_repo.finish_run(
             run_id=run_id,
             status=run_status,
+            stage=final_stage,
             message=execution_payload.get("reason", execution_payload["status"]),
         )
         run_record = resolved_runtime.run_log_repo.get_by_run(run_id)
@@ -476,6 +503,7 @@ def run_p0_cycle(
         resolved_runtime.run_log_repo.finish_run(
             run_id=run_id,
             status="failed",
+            stage=f"failed:{current_stage}",
             message=str(exc),
         )
         run_record = resolved_runtime.run_log_repo.get_by_run(run_id)
