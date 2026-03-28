@@ -48,6 +48,8 @@ def resolve_execution_broker(
     explicit_broker: Any | None,
     broker_mode: str,
     account_config_path: str | Path,
+    shadow_auto_fill: bool = False,
+    shadow_fill_at: str | None = None,
 ) -> tuple[Any | None, str | None]:
     if explicit_broker is not None:
         return explicit_broker, None
@@ -56,6 +58,9 @@ def resolve_execution_broker(
         return build_xtquant_broker(account_config_path=account_config_path)
 
     if broker_mode == "shadow":
-        return ShadowBroker(), None
+        shadow_config: dict[str, Any] | None = None
+        if shadow_fill_at is not None:
+            shadow_config = {"filled_at": shadow_fill_at}
+        return ShadowBroker(auto_fill=shadow_auto_fill, config=shadow_config), None
 
     return None, "missing broker for execute mode"

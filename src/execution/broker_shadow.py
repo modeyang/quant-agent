@@ -39,9 +39,11 @@ class ShadowBroker:
     def _build_fill(self, intent: dict[str, Any], shadow_order_id: str) -> dict[str, Any]:
         quantity = intent.get("quantity", intent.get("qty", 0))
         price = intent.get("price", intent.get("limit_price", 0.0))
+        client_order_id = intent.get("client_order_id")
+        fill_order_id = str(client_order_id) if client_order_id else shadow_order_id
         return {
-            "fill_id": f"{shadow_order_id}-F001",
-            "order_id": shadow_order_id,
+            "fill_id": f"{fill_order_id}-F001",
+            "order_id": fill_order_id,
             "symbol": intent.get("symbol"),
             "quantity": quantity,
             "price": price,

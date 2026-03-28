@@ -45,3 +45,32 @@ def test_shadow_broker_auto_fill_mode_generates_stable_fill_records():
             "filled_at": "2026-03-28 09:35:00",
         },
     ]
+
+
+def test_shadow_broker_auto_fill_uses_client_order_id_when_provided():
+    broker = ShadowBroker(auto_fill=True, config={"filled_at": "2026-03-28 09:35:00"})
+
+    response = broker.place_order(
+        {
+            "symbol": "600000.SH",
+            "quantity": 100,
+            "price": 10.5,
+            "client_order_id": "run-1-O001",
+        }
+    )
+
+    assert response == {
+        "result": "shadow_accepted",
+        "shadow_order_id": "shadow-0001",
+        "shadow_fill_id": "run-1-O001-F001",
+    }
+    assert broker.query_fills() == [
+        {
+            "fill_id": "run-1-O001-F001",
+            "order_id": "run-1-O001",
+            "symbol": "600000.SH",
+            "quantity": 100,
+            "price": 10.5,
+            "filled_at": "2026-03-28 09:35:00",
+        }
+    ]

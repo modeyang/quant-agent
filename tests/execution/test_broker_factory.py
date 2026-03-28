@@ -46,3 +46,22 @@ def test_resolve_execution_broker_returns_shadow_broker():
     assert broker is not None
     assert getattr(broker, "mode", None) == "shadow"
     assert error is None
+
+
+def test_resolve_execution_broker_supports_shadow_auto_fill_config():
+    broker, error = resolve_execution_broker(
+        explicit_broker=None,
+        broker_mode="shadow",
+        account_config_path="config/account.yaml",
+        shadow_auto_fill=True,
+        shadow_fill_at="2026-03-28 09:35:00",
+    )
+
+    assert broker is not None
+    assert getattr(broker, "mode", None) == "shadow"
+    response = broker.place_order(
+        {"symbol": "600000.SH", "quantity": 100, "price": 10.5, "client_order_id": "run-1-O001"}
+    )
+    assert response["shadow_fill_id"] == "run-1-O001-F001"
+    assert broker.query_fills()[0]["filled_at"] == "2026-03-28 09:35:00"
+    assert error is None

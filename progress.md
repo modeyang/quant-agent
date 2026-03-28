@@ -328,3 +328,28 @@
   - `tests/execution/test_xtquant_preflight.py` (created)
   - `README.md` (updated)
   - `progress.md` (updated)
+
+## Session: 2026-03-28 (Shadow Auto-Fill Wiring)
+
+### Phase 9: Shadow Auto-Fill Integration
+- **Status:** complete
+- Actions taken:
+  - 在 `resolve_execution_broker` 增加 `shadow_auto_fill` / `shadow_fill_at` 参数，支持创建可配置 `ShadowBroker`
+  - 在 orchestrator 执行链透传 shadow 参数，并在 auto-fill 命中时将模拟成交写入 `fills`
+  - 为 shadow 订单增加 `client_order_id` 对齐，确保模拟成交与 `orders` 对账 ID 一致
+  - 新增/扩展测试覆盖 broker factory、shadow broker、orchestrator 的 auto-fill 端到端路径
+- Files created/modified:
+  - `src/execution/broker_factory.py` (updated)
+  - `src/execution/broker_shadow.py` (updated)
+  - `src/agent/orchestrator.py` (updated)
+  - `tests/execution/test_broker_factory.py` (updated)
+  - `tests/execution/test_broker_shadow.py` (updated)
+  - `tests/agent/test_execution_orchestrator.py` (updated)
+  - `task_plan.md` (updated)
+  - `progress.md` (updated)
+
+## Test Results (Shadow Auto-Fill Wiring)
+| Test | Input | Expected | Actual | Status |
+|------|-------|----------|--------|--------|
+| Shadow targeted tests | `./venv/bin/python -m pytest tests/execution/test_broker_shadow.py tests/execution/test_broker_factory.py tests/agent/test_execution_orchestrator.py -q` | Shadow auto-fill wiring and persistence pass | `16 passed` | ✓ |
+| Full regression | `./venv/bin/python -m pytest tests -q` | No regression after shadow auto-fill integration | `58 passed` | ✓ |

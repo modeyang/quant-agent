@@ -85,6 +85,56 @@ def _is_shadow_broker(broker: Any) -> bool:
     return getattr(broker, "mode", "live") == "shadow"
 
 
+def _extract_shadow_fill_record(
+    broker: Any,
+    place_result: Any,
+    order_id: str,
+    symbol: str,
+    quantity: int,
+    price: float | None,
+    trade_date: str,
+) -> dict[str, Any] | None:
+    if not isinstance(place_result, dict):
+        return None
+    shadow_fill_id = place_result.get("shadow_fill_id")
+    if not shadow_fill_id:
+        return None
+
+    fill_item: dict[str, Any] = {}
+    if hasattr(broker, "query_fills"):
+        try:
+            fills = broker.query_fills()
+            for item in reversed(fills):
+                if isinstance(item, dict) and item.get("fill_id") == shadow_fill_id:
+                    fill_item = item
+                    break
+        except Exception:
+            fill_item = {}
+
+    quantity_value = fill_item.get("quantity", quantity)
+    try:
+        resolved_quantity = int(quantity_value)
+    except (TypeError, ValueError):
+        resolved_quantity = int(quantity)
+
+    price_value = fill_item.get("price", price)
+    if price_value is None:
+        price_value = 0.0
+    try:
+        resolved_price = float(price_value)
+    except (TypeError, ValueError):
+        resolved_price = float(price or 0.0)
+
+    return {
+        "fill_id": str(shadow_fill_id),
+        "order_id": order_id,
+        "symbol": symbol,
+        "quantity": resolved_quantity,
+        "price": resolved_price,
+        "filled_at": str(fill_item.get("filled_at", f"{trade_date} 14:50:00")),
+    }
+
+
 def _execute_cycle(
     runtime: ResearchRuntime,
     run_id: str,
@@ -143,6 +193,8 @@ def _execute_cycle(
     for idx, plan in enumerate(plans, start=1):
         order_id = f"{run_id}-O{idx:03d}"
         intent = _make_order_intent(symbol=plan.symbol)
+        if _is_shadow_broker(broker):
+            intent["client_order_id"] = order_id
 
         if require_manual_approval("open", approval_granted):
             blocked_count += 1
@@ -172,9 +224,10 @@ def _execute_cycle(
         )
 
         success = False
+        place_result: Any = None
         for attempt in range(1, max_place_retries + 1):
             try:
-                broker.place_order(intent)
+                place_result = broker.place_order(intent)
                 success = True
                 break
             except Exception as exc:
@@ -193,6 +246,26 @@ def _execute_cycle(
             if _is_shadow_broker(broker):
                 runtime.order_repo.update_status(order_id=order_id, status="shadow_submitted")
                 shadow_order_count += 1
+                shadow_fill = _extract_shadow_fill_record(
+                    broker=broker,
+                    place_result=place_result,
+                    order_id=order_id,
+                    symbol=plan.symbol,
+                    quantity=int(intent["quantity"]),
+                    price=intent["price"],
+                    trade_date=trade_date,
+                )
+                if shadow_fill is not None:
+                    runtime.fill_repo.save_fill(
+                        run_id=run_id,
+                        fill_id=shadow_fill["fill_id"],
+                        order_id=shadow_fill["order_id"],
+                        symbol=shadow_fill["symbol"],
+                        quantity=shadow_fill["quantity"],
+                        price=shadow_fill["price"],
+                        filled_at=shadow_fill["filled_at"],
+                    )
+                    runtime.order_repo.update_status(order_id=order_id, status="shadow_filled")
             else:
                 state_machine.fill()
                 runtime.order_repo.update_status(order_id=order_id, status=state_machine.state)
@@ -325,6 +398,8 @@ def run_p0_cycle(
     broker: Any | None = None,
     broker_mode: str = "injected",
     account_config_path: str | Path = "config/account.yaml",
+    shadow_auto_fill: bool = False,
+    shadow_fill_at: str | None = None,
     max_place_retries: int = 1,
     approval_granted: bool = False,
 ) -> dict[str, Any]:
@@ -406,6 +481,8 @@ def run_p0_cycle(
                 explicit_broker=broker,
                 broker_mode=broker_mode,
                 account_config_path=account_config_path,
+                shadow_auto_fill=shadow_auto_fill,
+                shadow_fill_at=shadow_fill_at,
             )
             if resolved_broker is None:
                 execution_payload = {

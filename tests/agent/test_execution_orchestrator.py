@@ -251,3 +251,41 @@ def test_run_p0_cycle_execute_mode_shadow_without_real_broker(tmp_path, fake_pro
     assert run_log is not None
     assert run_log["status"] == "success"
     assert run_log["stage"] == "completed"
+
+
+def test_run_p0_cycle_execute_mode_shadow_auto_fill_persists_simulated_fill(tmp_path, fake_provider):
+    runtime = build_research_runtime(db_path=tmp_path / "quant.db", provider=fake_provider)
+
+    result = run_p0_cycle(
+        mode="manual_execute",
+        runtime=runtime,
+        broker=None,
+        broker_mode="shadow",
+        shadow_auto_fill=True,
+        shadow_fill_at="2026-03-28 09:35:00",
+        approval_granted=True,
+        symbols=["600000.SH"],
+        start="2026-03-01",
+        end="2026-03-27",
+        min_score=60.0,
+    )
+
+    run_id = result["planning"]["run_id"]
+    orders = runtime.order_repo.list_by_run(run_id)
+    fills = runtime.fill_repo.list_by_run(run_id)
+    run_log = runtime.run_log_repo.get_by_run(run_id)
+
+    assert result["execution"]["status"] == "shadow"
+    assert result["execution"]["order_count"] == 1
+    assert result["execution"]["fill_count"] == 1
+    assert result["execution"]["shadow_order_count"] == 1
+    assert result["execution"]["reconciled_count"] == 1
+    assert result["execution"]["unmatched_order_ids"] == []
+    assert result["monitoring"]["status"] == "reinforced"
+    assert orders[0]["status"] == "shadow_filled"
+    assert len(fills) == 1
+    assert fills[0]["order_id"] == orders[0]["order_id"]
+    assert fills[0]["filled_at"] == "2026-03-28 09:35:00"
+    assert run_log is not None
+    assert run_log["status"] == "success"
+    assert run_log["stage"] == "completed"
