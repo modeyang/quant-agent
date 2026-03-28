@@ -51,15 +51,21 @@ Phase 8
 - **Status:** complete
 
 ### Phase 8: Real Broker Integration Planning
-- [ ] 评估 `xtquant` 接入 orchestrator 的最小安全路径（保持人工审批）
-- [ ] 设计 fake broker 与 real broker 的统一接口和切换策略
-- [ ] 增加 execution/memory 的失败重试与告警策略
+- [x] 评估 `xtquant` 接入 orchestrator 的最小安全路径（保持人工审批）
+- [x] 设计 fake broker 与 real broker 的统一接口和切换策略
+- [x] 增加 execution/memory 的失败重试与告警策略
+- **Status:** complete
+
+### Phase 9: Real Broker Safe Landing
+- [ ] 在本地可用环境验证 `xtquant` 真实初始化与连接流程
+- [ ] 增加 real broker 下的 dry-run / shadow 模式
+- [ ] 补充 real broker 异常场景集成测试策略
 - **Status:** in_progress
 
 ## Key Questions
-1. `xtquant` 真实接入是放在 P0 收尾还是 P1 起步更稳妥？
-2. real broker 接入时，是否默认继续使用 `approval_granted=False` 强制手工确认？
-3. execution 失败后的 `run_log` 状态是否需要细化为阶段级状态（planning/execution/reconcile）？
+1. `xtquant` 真实连接验证是否单独开 feature 分支进行？
+2. 是否将 `run_log` 阶段状态细化为 `planning/execution/monitoring/memory`？
+3. real broker 接入后是否默认 `max_place_retries=1`，避免重复下单风险？
 
 ## Decisions Made
 | Decision | Rationale |
@@ -74,6 +80,8 @@ Phase 8
 | 下一阶段优先补数据层持久化基础（`run_log` + execution 相关表） | 能先把执行链数据闭环打底，再接 orchestration |
 | execution 主链先以 fake broker 跑通并固化测试 | 在不依赖 `xtquant` 的前提下先验证编排正确性 |
 | monitoring/memory 先以最小切片落地 | 先形成 `review -> memory` 可运行链路，再迭代策略细节 |
+| real broker 接入先走 broker factory + 显式 broker_mode | 保持执行路径可控且可测试 |
+| execution 默认加入重试与结构化告警 | 提升稳定性并为复盘/记忆提供可追踪证据 |
 
 ## Errors Encountered
 | Error | Attempt | Resolution |
@@ -89,3 +97,4 @@ Phase 8
 - 本轮新增持久化表和 repository 后，下一步进入 execution wiring
 - execution wiring 已完成，下一步进入 monitoring/memory 最小切片
 - monitoring/memory 最小切片已完成，下一步评估 real broker 接入
+- broker factory 与 execution 重试告警已完成，下一步是 real broker 实机验证

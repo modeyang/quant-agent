@@ -8,6 +8,7 @@ import yaml
 
 from src.data.runtime import ResearchRuntime, build_research_runtime
 from src.execution.approval import require_manual_approval
+from src.execution.broker_factory import resolve_execution_broker
 from src.execution.order_state_machine import OrderStateMachine
 from src.execution.reconcile import reconcile_run
 from src.memory.conflict_resolver import resolve_memory_conflicts
@@ -84,9 +85,10 @@ def _execute_cycle(
     runtime: ResearchRuntime,
     run_id: str,
     plans: list[Any],
-    broker: Any | None,
+    broker: Any,
     approval_granted: bool,
     trade_date: str,
+    max_place_retries: int,
 ) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any]]:
     if not plans:
         review = build_trade_review(
@@ -127,37 +129,10 @@ def _execute_cycle(
             },
         )
 
-    if broker is None:
-        return (
-            {
-                "status": "unavailable",
-                "reason": "missing broker for execute mode",
-                "order_count": 0,
-                "fill_count": 0,
-                "reconciled_count": 0,
-                "rejected_count": len(plans),
-                "blocked_count": 0,
-                "unmatched_order_ids": [],
-            },
-            {
-                "status": "pending",
-                "summary": "review skipped because execution broker is unavailable",
-            },
-            {
-                "status": "pending",
-                "summary": "monitoring skipped because execution broker is unavailable",
-                "planned_count": len(plans),
-                "ordered_count": 0,
-                "filled_count": 0,
-                "invalidated_symbols": [],
-                "reinforced_symbols": [],
-                "notes": [],
-            },
-        )
-
     executed_count = 0
     rejected_count = 0
     blocked_count = 0
+    alerts: list[dict[str, Any]] = []
 
     for idx, plan in enumerate(plans, start=1):
         order_id = f"{run_id}-O{idx:03d}"
@@ -190,8 +165,25 @@ def _execute_cycle(
             status=state_machine.state,
         )
 
-        try:
-            broker.place_order(intent)
+        success = False
+        for attempt in range(1, max_place_retries + 1):
+            try:
+                broker.place_order(intent)
+                success = True
+                break
+            except Exception as exc:
+                if attempt == max_place_retries:
+                    alerts.append(
+                        {
+                            "type": "place_order_failed",
+                            "order_id": order_id,
+                            "symbol": plan.symbol,
+                            "attempts": attempt,
+                            "message": str(exc),
+                        }
+                    )
+
+        if success:
             state_machine.fill()
             runtime.order_repo.update_status(order_id=order_id, status=state_machine.state)
             runtime.fill_repo.save_fill(
@@ -206,7 +198,7 @@ def _execute_cycle(
             state_machine.reconcile()
             runtime.order_repo.update_status(order_id=order_id, status=state_machine.state)
             executed_count += 1
-        except Exception:
+        else:
             state_machine.reject()
             runtime.order_repo.update_status(order_id=order_id, status=state_machine.state)
             rejected_count += 1
@@ -238,10 +230,14 @@ def _execute_cycle(
         postmortem_issues.append(
             f"unmatched orders: {', '.join(reconcile_summary['unmatched_order_ids'])}"
         )
+    if alerts:
+        postmortem_issues.append(f"execution alerts: {len(alerts)}")
 
     execution_status = "done"
     if blocked_count and executed_count == 0:
         execution_status = "blocked"
+    elif executed_count == 0 and rejected_count > 0:
+        execution_status = "failed"
 
     execution = {
         "status": execution_status,
@@ -251,6 +247,7 @@ def _execute_cycle(
         "rejected_count": rejected_count,
         "blocked_count": blocked_count,
         "unmatched_order_ids": reconcile_summary["unmatched_order_ids"],
+        "alerts": alerts,
     }
     review_payload = {
         "status": "ready",
@@ -311,6 +308,9 @@ def run_p0_cycle(
     end: str = "2026-03-27",
     min_score: float | None = None,
     broker: Any | None = None,
+    broker_mode: str = "injected",
+    account_config_path: str | Path = "config/account.yaml",
+    max_place_retries: int = 1,
     approval_granted: bool = False,
 ) -> dict[str, Any]:
     try:
@@ -377,20 +377,58 @@ def run_p0_cycle(
                 "entries": [],
             }
         else:
-            execution_payload, review_payload, monitoring_payload = _execute_cycle(
-                runtime=resolved_runtime,
-                run_id=run_id,
-                plans=plans,
-                broker=broker,
-                approval_granted=approval_granted,
-                trade_date=end,
+            resolved_broker, broker_error = resolve_execution_broker(
+                explicit_broker=broker,
+                broker_mode=broker_mode,
+                account_config_path=account_config_path,
             )
-            memory_payload = _persist_memory_entries(
-                runtime=resolved_runtime,
-                run_id=run_id,
-                review_payload=review_payload,
-                monitoring_payload=monitoring_payload,
-            )
+            if resolved_broker is None:
+                execution_payload = {
+                    "status": "unavailable",
+                    "reason": broker_error or "missing broker for execute mode",
+                    "order_count": 0,
+                    "fill_count": 0,
+                    "reconciled_count": 0,
+                    "rejected_count": len(plans),
+                    "blocked_count": 0,
+                    "unmatched_order_ids": [],
+                    "alerts": [],
+                }
+                review_payload = {
+                    "status": "pending",
+                    "summary": "review skipped because execution broker is unavailable",
+                }
+                monitoring_payload = {
+                    "status": "pending",
+                    "summary": "monitoring skipped because execution broker is unavailable",
+                    "planned_count": len(plans),
+                    "ordered_count": 0,
+                    "filled_count": 0,
+                    "invalidated_symbols": [],
+                    "reinforced_symbols": [],
+                    "notes": [],
+                }
+                memory_payload = {
+                    "status": "skipped",
+                    "entry_count": 0,
+                    "entries": [],
+                }
+            else:
+                execution_payload, review_payload, monitoring_payload = _execute_cycle(
+                    runtime=resolved_runtime,
+                    run_id=run_id,
+                    plans=plans,
+                    broker=resolved_broker,
+                    approval_granted=approval_granted,
+                    trade_date=end,
+                    max_place_retries=max(1, int(max_place_retries)),
+                )
+                memory_payload = _persist_memory_entries(
+                    runtime=resolved_runtime,
+                    run_id=run_id,
+                    review_payload=review_payload,
+                    monitoring_payload=monitoring_payload,
+                )
 
         run_status = "success"
         if execution_payload["status"] in {"unavailable", "failed"}:

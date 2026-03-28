@@ -215,3 +215,26 @@
 | Monitoring/Memory + Agent tests | `./venv/bin/python -m pytest tests/memory tests/monitoring tests/agent -q` | New modules and orchestration integration pass | `13 passed` | ✓ |
 | Data regression | `./venv/bin/python -m pytest tests/data -q` | Data-layer behavior remains stable | `13 passed` | ✓ |
 | Full regression | `./venv/bin/python -m pytest tests -q` | No regression after monitoring/memory integration | `41 passed` | ✓ |
+
+## Session: 2026-03-28 (Broker Factory & Retry Alerts)
+
+### Phase 8: Real Broker Integration Planning
+- **Status:** complete
+- Actions taken:
+  - 新增 `broker_factory`，支持 `injected` / `xtquant` 两种 broker 解析模式
+  - 在 orchestrator 执行链增加 `broker_mode`、`account_config_path`、`max_place_retries`
+  - 为下单流程增加重试机制和结构化 execution alerts
+  - 将重试耗尽场景的 execution 状态标记为 `failed` 并写入 `run_log`
+- Files created/modified:
+  - `src/execution/broker_factory.py` (created)
+  - `src/agent/orchestrator.py` (updated)
+  - `tests/execution/test_broker_factory.py` (created)
+  - `tests/agent/test_execution_orchestrator.py` (updated)
+  - `task_plan.md` (updated)
+  - `progress.md` (updated)
+
+## Test Results (Broker Factory & Retry)
+| Test | Input | Expected | Actual | Status |
+|------|-------|----------|--------|--------|
+| Broker + execution targeted tests | `./venv/bin/python -m pytest tests/execution/test_broker_factory.py tests/agent/test_execution_orchestrator.py -q` | Broker resolution and retry behavior pass | `9 passed` | ✓ |
+| Full regression | `./venv/bin/python -m pytest tests -q` | No regression after broker/retry changes | `47 passed` | ✓ |
