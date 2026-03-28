@@ -6,7 +6,7 @@ A 股量化交易操作系统，按 Harness Engineering 方法构建。
 
 ## 当前状态
 
-🟡 `P0` 开发中。当前已完成：
+🟡 `P0` 功能闭环已完成，当前处于“最小可上线硬化”阶段。当前已完成：
 - 包骨架与 `pytest` 测试基线
 - 类型化配置加载与共享领域模型
 - SQLite 存储与 `candidate_plan` 仓储
@@ -14,6 +14,12 @@ A 股量化交易操作系统，按 Harness Engineering 方法构建。
 - 最小盘后计划引擎
 - 审批规则、订单状态机、对账与复盘摘要
 - `plan_only` 真实链路：`adata -> generate_plan -> SQLite -> orchestrator`
+- `shadow_auto_fill` 模拟成交落库
+- `run_log_stage_event` 阶段耗时透出
+- 最小执行门禁：`kill_switch` / `max_orders_per_run` / `max_order_notional`
+- 可选严格对账：`strict_reconcile`
+
+上线关键 TODO 清单见：[docs/go_live_todo.md](docs/go_live_todo.md)。
 
 ## 快速开始
 

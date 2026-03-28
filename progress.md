@@ -392,3 +392,29 @@
 | Test | Input | Expected | Actual | Status |
 |------|-------|----------|--------|--------|
 | Docs consistency check | Manual read of `task_plan.md`/`progress.md`/`findings.md` | Phase status, blocker, and next-step queue are aligned | Aligned | ✓ |
+
+## Session: 2026-03-28 (Minimum Go-Live Route Development)
+
+### Phase 11: Go-Live Hardening (Slice 1)
+- **Status:** complete
+- Actions taken:
+  - 增强执行门禁：接入 `kill_switch`、`max_orders_per_run`、`max_order_notional`
+  - 增强对账：新增 `reconcile_with_broker_snapshot`，支持 strict 对账并输出 mismatch 细节
+  - orchestrator 接入 `strict_reconcile` 开关，对账不一致时 execution 失败并输出结构化告警
+  - 新增上线 TODO 清单 `docs/go_live_todo.md`，同步 `task_plan.md` / `README.md`
+- Files created/modified:
+  - `src/agent/orchestrator.py` (updated)
+  - `src/execution/reconcile.py` (updated)
+  - `config/default.yaml` (updated)
+  - `tests/execution/test_reconcile.py` (updated)
+  - `tests/agent/test_execution_orchestrator.py` (updated)
+  - `docs/go_live_todo.md` (created)
+  - `task_plan.md` (updated)
+  - `README.md` (updated)
+  - `progress.md` (updated)
+
+## Test Results (Go-Live Hardening Slice 1)
+| Test | Input | Expected | Actual | Status |
+|------|-------|----------|--------|--------|
+| Reconcile + execution targeted tests | `./venv/bin/python -m pytest tests/execution/test_reconcile.py tests/agent/test_execution_orchestrator.py -q` | kill switch / strict reconcile / mismatch alerts pass | `14 passed` | ✓ |
+| Full regression | `./venv/bin/python -m pytest tests -q` | No regression after go-live hardening slice 1 | `62 passed` | ✓ |

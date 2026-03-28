@@ -4,7 +4,7 @@
 完成 `P0` 最小交易闭环的可运行实现与文档收口，并为 `P1` 盘中轻监控增强准备清晰入口任务。
 
 ## Current Phase
-Phase 10
+Phase 11
 
 ## Phases
 
@@ -72,11 +72,21 @@ Phase 10
 - [ ] P1-1：将 `monitoring` 节点按时段拆分（盘前/盘中/尾盘）并约定输入输出 schema
 - [ ] P1-2：增加 `auction_watch` / `sector_watch` 到 orchestrator 的可配置接线（默认关闭）
 - [ ] P1-3：在 review 输出中增加“监控触发 -> 执行结果”关联摘要
+- **Status:** complete
+
+### Phase 11: Minimum Go-Live Hardening
+- [x] 增加执行门禁：`kill_switch`、`max_orders_per_run`、`max_order_notional`
+- [x] 增加严格对账模式：`strict_reconcile` 下 broker 快照不一致直接判定失败并告警
+- [x] 将关键上线缺口整理为可执行 TODO 清单（`docs/go_live_todo.md`）
+- [ ] 接入可持续运行入口（CLI/cron/daemon）与任务编排
+- [ ] 增加生产告警通道与值守策略（连接失败/对账失败/重试耗尽）
+- [ ] 完成上线运行手册（启动、回滚、故障处理、手工接管）
+- [ ] 周末后完成 `xtquant` 实机验证并解除 `Phase 9` 阻塞
 - **Status:** in_progress
 
 ## Key Questions
 1. `xtquant` 真实连接验证是否单独开 feature 分支进行？（建议：是）
-2. P1 入口优先级是否按 `P1-1 -> P1-2 -> P1-3` 执行？
+2. 最小上线阶段中，调度入口优先采用 `cron + CLI` 还是长驻 daemon？
 3. 盘中轻监控接线默认是否继续保持只读（不触发自动下单）？
 
 ## Decisions Made
@@ -98,6 +108,7 @@ Phase 10
 | shadow 模式增加可选 `auto_fill` 并由 orchestrator 透传 | 支持 dry-run 下的成交模拟与回测联调，不改变默认行为 |
 | `run_log` 记录阶段状态并在 orchestrator 中实时推进 | 提升执行可观测性，方便问题定位和运营审计 |
 | 将 `run_log_stage_event` 输出到 execution/review 结果 | 让阶段耗时可直接用于复盘摘要与外部观测 |
+| 在最小上线阶段先补执行门禁与严格对账，再做调度和运维能力 | 保证在无实盘环境时仍能先提升上线安全性 |
 
 ## Errors Encountered
 | Error | Attempt | Resolution |
@@ -117,4 +128,4 @@ Phase 10
 - shadow broker 模式已完成，可在无 `xtquant` 环境下继续 execution 开发
 - shadow auto_fill 开关已接入 orchestrator，支持模拟成交落库与监控强化联动
 - stage duration 已透出到 execution/review，当前剩余阻塞仅为 `xtquant` 环境可用性验证
-- `Phase 10` 进入文档收口与 `P1` 入口准备，后续开发优先推进监控增强链路
+- 已进入 `Phase 11` 最小上线硬化：优先执行门禁、严格对账、运行编排和运维告警

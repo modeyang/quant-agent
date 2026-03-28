@@ -301,3 +301,80 @@ def test_run_p0_cycle_execute_mode_shadow_auto_fill_persists_simulated_fill(tmp_
     assert run_log is not None
     assert run_log["status"] == "success"
     assert run_log["stage"] == "completed"
+
+
+def test_run_p0_cycle_execute_mode_kill_switch_blocks_all_orders(
+    tmp_path,
+    fake_provider,
+    fake_broker,
+):
+    runtime = build_research_runtime(db_path=tmp_path / "quant.db", provider=fake_provider)
+
+    result = run_p0_cycle(
+        mode="manual_execute",
+        runtime=runtime,
+        broker=fake_broker,
+        kill_switch=True,
+        approval_granted=True,
+        symbols=["600000.SH"],
+        start="2026-03-01",
+        end="2026-03-27",
+        min_score=60.0,
+    )
+
+    run_id = result["planning"]["run_id"]
+    orders = runtime.order_repo.list_by_run(run_id)
+    fills = runtime.fill_repo.list_by_run(run_id)
+    run_log = runtime.run_log_repo.get_by_run(run_id)
+
+    assert result["execution"]["status"] == "blocked"
+    assert result["execution"]["reason"] == "kill switch enabled"
+    assert result["execution"]["order_count"] == 0
+    assert result["execution"]["risk_rejected_count"] == 1
+    assert result["execution"]["alerts"][0]["type"] == "kill_switch"
+    assert result["memory"]["status"] == "skipped"
+    assert orders == []
+    assert fills == []
+    assert run_log is not None
+    assert run_log["status"] == "success"
+
+
+def test_run_p0_cycle_execute_mode_strict_reconcile_fails_on_broker_mismatch(tmp_path, fake_provider):
+    class MismatchBroker:
+        def place_order(self, intent):
+            return {"result": "ok"}
+
+        def cancel_order(self, order_id):
+            return {"result": "ok", "order_id": order_id}
+
+        def query_orders(self):
+            return []
+
+        def query_fills(self):
+            return []
+
+    runtime = build_research_runtime(db_path=tmp_path / "quant.db", provider=fake_provider)
+    broker = MismatchBroker()
+
+    result = run_p0_cycle(
+        mode="manual_execute",
+        runtime=runtime,
+        broker=broker,
+        strict_reconcile=True,
+        approval_granted=True,
+        symbols=["600000.SH"],
+        start="2026-03-01",
+        end="2026-03-27",
+        min_score=60.0,
+    )
+
+    run_id = result["planning"]["run_id"]
+    run_log = runtime.run_log_repo.get_by_run(run_id)
+
+    assert result["execution"]["status"] == "failed"
+    assert result["execution"]["broker_reconcile"]["strict_ok"] is False
+    assert result["execution"]["broker_reconcile"]["missing_on_broker_order_ids"] != []
+    assert any(alert["type"] == "reconcile_mismatch" for alert in result["execution"]["alerts"])
+    assert run_log is not None
+    assert run_log["status"] == "failed"
+    assert run_log["stage"] == "failed"

@@ -12,6 +12,13 @@ risk:
   max_drawdown_pct: 0.10      # 最大回撤 10%
   max_total_position_pct: 0.80  # 总仓位上限 80%
 
+# === 执行控制（最小上线门禁） ===
+execution:
+  kill_switch: false
+  max_orders_per_run: 5
+  max_order_notional: 200000.0
+  strict_reconcile: false
+
 # === 数据源 ===
 data:
   akshare:

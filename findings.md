@@ -68,5 +68,9 @@
   - `execution.stage_duration_seconds`
   - `execution.total_stage_duration_seconds`
   - `review.stage_timing_summary`
+- 最小可上线硬化（Slice 1）已完成：
+  - 执行门禁：`kill_switch` / `max_orders_per_run` / `max_order_notional`
+  - 严格对账：`strict_reconcile` + mismatch 结构化告警
+  - 上线缺口清单：`docs/go_live_todo.md`
 - 当前唯一未闭环项：`xtquant` 实机初始化与连接验证（依赖外部环境）
 - 下一阶段建议聚焦 `P1`：盘中轻监控增强与执行观测联动（保持人工审批边界不变）
