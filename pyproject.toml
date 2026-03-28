@@ -9,6 +9,9 @@ dependencies = [
     "pyyaml",
 ]
 
+[project.scripts]
+quant-agent = "src.agent.cli:main"
+
 [dependency-groups]
 dev = [
     "pytest",

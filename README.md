@@ -44,6 +44,34 @@ python3 -m venv venv
 
 如果本地没有 `adata`，可以继续使用测试里的 fake provider 验证 orchestrator 行为。
 
+### CLI 入口（推荐用于定时调度）
+
+先安装可执行脚本入口：
+
+```bash
+./venv/bin/python -m pip install -e .
+```
+
+运行计划模式（安全默认：`plan_only`、`kill_switch=true`）：
+
+```bash
+quant-agent run --mode plan_only --output json
+```
+
+运行手动执行模式（示例：显式审批、严格对账、关闭 kill switch）：
+
+```bash
+quant-agent run --mode manual_execute --broker-mode xtquant --approval-granted --strict-reconcile --no-kill-switch --output json
+```
+
+打印推荐 crontab 模板：
+
+```bash
+quant-agent cron-template --workspace "$(pwd)"
+```
+
+更多调度示例见：[docs/cron.example.md](docs/cron.example.md)。
+
 ### xtquant preflight（本地执行前检查）
 
 ```python
