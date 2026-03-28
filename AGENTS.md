@@ -39,6 +39,11 @@ Create tests as `tests/test_<module>.py`. Prefer deterministic unit tests with m
 ## Commit & Pull Request Guidelines
 Recent history uses short prefixed subjects such as `feat:` and `docs:`. Follow that pattern and keep messages imperative, for example `feat: add akshare data adapter`.
 
+Phase-based commit rule:
+- Every completed independent phase must produce one dedicated commit.
+- Each phase commit should include code, tests, and doc updates for that phase.
+- Record the commit ID in project progress artifacts (for example `task_plan.md` / `progress.md`) to keep milestones traceable.
+
 PRs should include:
 
 - a short summary of behavior changes
