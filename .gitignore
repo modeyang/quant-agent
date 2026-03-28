@@ -50,6 +50,8 @@ data/logs/*.log
 data/db/*.sqlite3
 *.csv
 *.parquet
+.worktrees/
+worktrees/
 
 # Jupyter
 .ipynb_checkpoints/
