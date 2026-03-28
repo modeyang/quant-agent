@@ -300,4 +300,16 @@
   - `src/data/schema.py` (updated)
   - `src/data/repositories.py` (updated)
   - `tests/data/test_repositories.py` (updated)
+
+## Session: 2026-03-28 (Shadow Broker Fill Simulation)
+
+### Phase 9: Optional Shadow Fill Simulation
+- **Status:** complete
+- Actions taken:
+  - 为 `ShadowBroker` 增加可选 `auto_fill` 行为并保持默认行为不变
+  - 新增 `query_fills()` 以查询模拟成交记录
+  - 增加 `tests/execution/test_broker_shadow.py`，覆盖默认无成交与自动成交两种模式
+- Files created/modified:
+  - `src/execution/broker_shadow.py` (updated)
+  - `tests/execution/test_broker_shadow.py` (created)
   - `progress.md` (updated)
