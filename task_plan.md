@@ -4,7 +4,7 @@
 把已落地的 `P0` 骨架推进成可运行的 `plan_only` 真实链路：使用 `adata` 拉取数据，生成结构化计划，写入 SQLite，并由 orchestrator 返回真实结果。
 
 ## Current Phase
-Phase 8
+Phase 9
 
 ## Phases
 
@@ -58,14 +58,14 @@ Phase 8
 
 ### Phase 9: Real Broker Safe Landing
 - [ ] 在本地可用环境验证 `xtquant` 真实初始化与连接流程
-- [ ] 增加 real broker 下的 dry-run / shadow 模式
+- [x] 增加 real broker 下的 dry-run / shadow 模式
 - [ ] 补充 real broker 异常场景集成测试策略
 - **Status:** in_progress
 
 ## Key Questions
 1. `xtquant` 真实连接验证是否单独开 feature 分支进行？
 2. 是否将 `run_log` 阶段状态细化为 `planning/execution/monitoring/memory`？
-3. real broker 接入后是否默认 `max_place_retries=1`，避免重复下单风险？
+3. shadow 模式下是否需要增加“模拟成交”开关用于策略回测联调？
 
 ## Decisions Made
 | Decision | Rationale |
@@ -82,6 +82,7 @@ Phase 8
 | monitoring/memory 先以最小切片落地 | 先形成 `review -> memory` 可运行链路，再迭代策略细节 |
 | real broker 接入先走 broker factory + 显式 broker_mode | 保持执行路径可控且可测试 |
 | execution 默认加入重试与结构化告警 | 提升稳定性并为复盘/记忆提供可追踪证据 |
+| 在 `xtquant` 不可用时优先推进 shadow 模式和异常策略 | 保持开发连续性，不阻塞 execution 主链演进 |
 
 ## Errors Encountered
 | Error | Attempt | Resolution |
@@ -98,3 +99,4 @@ Phase 8
 - execution wiring 已完成，下一步进入 monitoring/memory 最小切片
 - monitoring/memory 最小切片已完成，下一步评估 real broker 接入
 - broker factory 与 execution 重试告警已完成，下一步是 real broker 实机验证
+- shadow broker 模式已完成，可在无 `xtquant` 环境下继续 execution 开发

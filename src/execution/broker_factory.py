@@ -5,6 +5,7 @@ from typing import Any
 
 import yaml
 
+from src.execution.broker_shadow import ShadowBroker
 from src.execution.broker_xtquant import XtquantBroker
 
 
@@ -54,5 +55,7 @@ def resolve_execution_broker(
     if broker_mode == "xtquant":
         return build_xtquant_broker(account_config_path=account_config_path)
 
-    return None, "missing broker for execute mode"
+    if broker_mode == "shadow":
+        return ShadowBroker(), None
 
+    return None, "missing broker for execute mode"

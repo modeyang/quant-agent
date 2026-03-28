@@ -81,6 +81,10 @@ def _make_order_intent(symbol: str, quantity: int = 100, price: float | None = N
     }
 
 
+def _is_shadow_broker(broker: Any) -> bool:
+    return getattr(broker, "mode", "live") == "shadow"
+
+
 def _execute_cycle(
     runtime: ResearchRuntime,
     run_id: str,
@@ -103,6 +107,7 @@ def _execute_cycle(
                 "reason": "no candidate plans",
                 "order_count": 0,
                 "fill_count": 0,
+                "shadow_order_count": 0,
                 "reconciled_count": 0,
                 "rejected_count": 0,
                 "blocked_count": 0,
@@ -130,6 +135,7 @@ def _execute_cycle(
         )
 
     executed_count = 0
+    shadow_order_count = 0
     rejected_count = 0
     blocked_count = 0
     alerts: list[dict[str, Any]] = []
@@ -184,20 +190,24 @@ def _execute_cycle(
                     )
 
         if success:
-            state_machine.fill()
-            runtime.order_repo.update_status(order_id=order_id, status=state_machine.state)
-            runtime.fill_repo.save_fill(
-                run_id=run_id,
-                fill_id=f"{order_id}-F001",
-                order_id=order_id,
-                symbol=plan.symbol,
-                quantity=intent["quantity"],
-                price=float(intent["price"] or 0.0),
-                filled_at=f"{trade_date} 14:50:00",
-            )
-            state_machine.reconcile()
-            runtime.order_repo.update_status(order_id=order_id, status=state_machine.state)
-            executed_count += 1
+            if _is_shadow_broker(broker):
+                runtime.order_repo.update_status(order_id=order_id, status="shadow_submitted")
+                shadow_order_count += 1
+            else:
+                state_machine.fill()
+                runtime.order_repo.update_status(order_id=order_id, status=state_machine.state)
+                runtime.fill_repo.save_fill(
+                    run_id=run_id,
+                    fill_id=f"{order_id}-F001",
+                    order_id=order_id,
+                    symbol=plan.symbol,
+                    quantity=intent["quantity"],
+                    price=float(intent["price"] or 0.0),
+                    filled_at=f"{trade_date} 14:50:00",
+                )
+                state_machine.reconcile()
+                runtime.order_repo.update_status(order_id=order_id, status=state_machine.state)
+                executed_count += 1
         else:
             state_machine.reject()
             runtime.order_repo.update_status(order_id=order_id, status=state_machine.state)
@@ -213,14 +223,14 @@ def _execute_cycle(
         run_id=run_id,
         cash=0.0,
         total_asset=float(len(orders)),
-        position_value=float(executed_count),
+        position_value=float(executed_count + shadow_order_count),
         snapshot_at=f"{trade_date} 15:00:00",
     )
 
     review = build_trade_review(
         trade_date=trade_date,
         planned=len(plans),
-        executed=executed_count,
+        executed=executed_count + shadow_order_count,
         rejected=rejected_count,
     )
     postmortem_issues: list[str] = []
@@ -232,17 +242,22 @@ def _execute_cycle(
         )
     if alerts:
         postmortem_issues.append(f"execution alerts: {len(alerts)}")
+    if shadow_order_count:
+        postmortem_issues.append(f"shadow orders: {shadow_order_count}")
 
     execution_status = "done"
     if blocked_count and executed_count == 0:
         execution_status = "blocked"
     elif executed_count == 0 and rejected_count > 0:
         execution_status = "failed"
+    elif shadow_order_count > 0 and executed_count == 0 and rejected_count == 0:
+        execution_status = "shadow"
 
     execution = {
         "status": execution_status,
         "order_count": len(orders),
         "fill_count": len(fills),
+        "shadow_order_count": shadow_order_count,
         "reconciled_count": reconcile_summary["reconciled"],
         "rejected_count": rejected_count,
         "blocked_count": blocked_count,
@@ -352,6 +367,7 @@ def run_p0_cycle(
                 "reason": "plan_only mode",
                 "order_count": 0,
                 "fill_count": 0,
+                "shadow_order_count": 0,
                 "reconciled_count": 0,
                 "rejected_count": 0,
                 "blocked_count": 0,
@@ -388,6 +404,7 @@ def run_p0_cycle(
                     "reason": broker_error or "missing broker for execute mode",
                     "order_count": 0,
                     "fill_count": 0,
+                    "shadow_order_count": 0,
                     "reconciled_count": 0,
                     "rejected_count": len(plans),
                     "blocked_count": 0,

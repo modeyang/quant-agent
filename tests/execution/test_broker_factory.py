@@ -35,3 +35,14 @@ def test_resolve_execution_broker_reports_missing_account_config_for_xtquant(tmp
     assert error is not None
     assert "account config not found" in error
 
+
+def test_resolve_execution_broker_returns_shadow_broker():
+    broker, error = resolve_execution_broker(
+        explicit_broker=None,
+        broker_mode="shadow",
+        account_config_path="config/account.yaml",
+    )
+
+    assert broker is not None
+    assert getattr(broker, "mode", None) == "shadow"
+    assert error is None
