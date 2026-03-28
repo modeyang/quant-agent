@@ -15,6 +15,14 @@ A 股量化交易操作系统，按 Harness Engineering 方法构建。
 - 审批规则、订单状态机、对账与复盘摘要
 - `plan_only` 真实链路：`adata -> generate_plan -> SQLite -> orchestrator`
 
+## 提交准则
+
+为便于项目管理与回溯，采用以下规则：
+- 每完成一个独立阶段，立即生成一个独立 commit。
+- commit 需包含该阶段对应的代码、测试和文档同步。
+- commit message 使用 `feat:` / `fix:` / `chore:` / `docs:` / `test:` 前缀。
+- 提交后推送到远端，并在进度文档记录 commit id 与阶段说明。
+
 ## 快速开始
 
 ### 创建本地环境
